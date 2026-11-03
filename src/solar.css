@@ -1544,9 +1544,9 @@
   }
 }
 
-/* ---------------- N?n h? m?t tr?i toï¿½n mï¿½n hï¿½nh ---------------- */
-/* M?c d?nh (sidebar thu g?n ho?c mobile): m?i th? bï¿½m sï¿½t l? trï¿½i nhu cu.
-   Khi sidebar m? (desktop): ch?a 300px sidebar + kho?ng h?. */
+/* ---------------- Full-screen solar backdrop ---------------- */
+/* Default (sidebar collapsed or mobile): elements hug the left edge.
+   When the sidebar is open (desktop): leave room for the 300px sidebar + gap. */
 @media (min-width: 901px) {
   .app-shell:not(.is-collapsed) .solar-head {
     left: 322px;
@@ -1566,12 +1566,12 @@
   }
 }
 
-/* N?n 3D tinh ? các màn khác: gi?m sáng d? ch? d?c rõ. */
+/* Dim the 3D scene on non-home views for readability. */
 .solar-page.is-ambient .solar-stage {
   opacity: 0.34;
 }
 
-/* HUD c?a hero h? m?t tr?i ch? hi?n ? d?u trang; cu?n xu?ng thì nhu?ng ch? cho n?i dung. */
+/* The HUD hides as soon as the user scrolls past the hero. */
 .solar-page.is-away .solar-ui {
   opacity: 0;
   visibility: hidden;
@@ -1584,7 +1584,7 @@
   transition: opacity 320ms var(--sol-ease);
 }
 
-/* T?m kính m? cho ph?n trang ch? cu?n: ch? d?c du?c trên n?n h? m?t tr?i. */
+/* Frosted plate for the home section so text stays readable over the solar. */
 .home-welcome {
   border-top: 1px solid var(--line, rgba(120, 132, 158, 0.22));
   background: color-mix(in srgb, var(--bg) 78%, transparent);
