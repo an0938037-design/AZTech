@@ -1,5 +1,6 @@
 import { useStore } from "../store";
-import { SUBJECTS, subjectCode } from "../subjects";
+import { SUBJECTS, subjectCode, subjectAccent } from "../subjects";
+import type { CSSProperties } from "react";
 
 export default function WelcomeSection() {
   const lessons = useStore((s) => s.lessons);
@@ -47,6 +48,7 @@ export default function WelcomeSection() {
               className="subject-tile"
               key={subject.name}
               onClick={() => chooseSubject(subject.name)}
+              style={{ "--subject-accent": subjectAccent(subject.name) } as CSSProperties}
             >
               <span className="tile-top">
                 <span className="tile-code">{subjectCode(subject.name)}</span>

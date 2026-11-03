@@ -52,10 +52,16 @@ export default function TopStatus({ onMenu }: Props) {
         <span className="top-kicker">HỆ THỐNG HỌC TẬP CÁ NHÂN</span>
         <span className="top-dot" aria-hidden="true" />
         <span className="top-view">{VIEW_LABEL[view] ?? "TRANG CHỦ"}</span>
-        <span className={`top-pill ${account ? "is-cloud" : ""}`}>
+        <button
+          type="button"
+          className={`top-pill ${account ? "is-cloud" : ""}`}
+          onClick={() => setView("account")}
+          aria-label={account ? "Mở tài khoản cloud" : "Thiết lập tài khoản cloud"}
+          title="Quản lý tài khoản"
+        >
           {account ? <Cloud size={11} /> : <WifiOff size={11} />}
           {account ? `CLOUD · ${account.code}` : "LOCAL"}
-        </span>
+        </button>
         <button
           type="button"
           className="top-manage"

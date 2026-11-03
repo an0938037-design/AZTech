@@ -523,3 +523,15 @@ export function chapterById(
 export function percent(value: number): string {
   return `${Math.round(Math.max(0, Math.min(1, value)) * 100)}%`;
 }
+
+/* Mã màu nhận diện cho từng hành tinh, dùng đồng bộ giữa cảnh 3D và giao diện 2D. */
+export const PLANET_ACCENT: Record<PlanetId, string> = {
+  mercury: "#b8b2a6",
+  venus: "#e8c47a",
+  earth: "#5ba9ff",
+  mars: "#d2764a",
+  jupiter: "#d8b98d",
+  saturn: "#e3cea4",
+  uranus: "#a4e0e6",
+  neptune: "#4d7dff",
+};

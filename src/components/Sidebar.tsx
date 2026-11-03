@@ -13,10 +13,12 @@ import {
   Sun,
   Trash,
   WifiOff,
+  X,
 } from "lucide-react";
 import { useStore } from "../store";
 import type { SavedLesson } from "../storage";
-import { subjectCode } from "../subjects";
+import { subjectCode, subjectAccent } from "../subjects";
+import type { CSSProperties } from "react";
 
 interface Props {
   open: boolean;
@@ -264,11 +266,14 @@ export default function Sidebar({ open, onClose }: Props) {
           <button
             type="button"
             className="brand-mark"
-            onClick={toggleSidebarCollapse}
-            aria-label={sidebarCollapsed ? "Mở thanh điều hướng" : "Thu gọn thanh điều hướng"}
-            title={sidebarCollapsed ? "Mở" : "Thu gọn"}
+            onClick={() => {
+              if (open) onClose();
+              else toggleSidebarCollapse();
+            }}
+            aria-label={open ? "Đóng thanh điều hướng" : sidebarCollapsed ? "Mở thanh điều hướng" : "Thu gọn thanh điều hướng"}
+            title={open ? "Đóng" : sidebarCollapsed ? "Mở" : "Thu gọn"}
           >
-            AI
+            {open ? <X size={18} /> : "AI"}
           </button>
           <div className="brand-copy">
             <strong>LEARNING ENGINE</strong>
@@ -413,7 +418,11 @@ export default function Sidebar({ open, onClose }: Props) {
             const items = grouped[subject] ?? [];
             const isOpen = !collapsed.has(subject) || Boolean(search);
             return (
-              <div className="subject-group" key={subject}>
+              <div
+                className="subject-group"
+                key={subject}
+                style={{ "--subject-accent": subjectAccent(subject) } as CSSProperties}
+              >
                 <button
                   type="button"
                   className="subject-row"

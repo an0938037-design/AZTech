@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
-import { ArrowUpRight, BookOpen, Cloud, Search, WifiOff } from "lucide-react";
+import { ArrowUpRight, BookOpen, Cloud, Search, WifiOff, X } from "lucide-react";
 import { useStore } from "../store";
+import { subjectAccent } from "../subjects";
 import type { SavedLesson } from "../storage";
 
 export default function Library() {
@@ -61,6 +62,16 @@ export default function Library() {
             placeholder="Tìm môn hoặc chủ đề…"
             aria-label="Tìm bài học"
           />
+          {query && (
+            <button
+              type="button"
+              className="search-clear"
+              onClick={() => setQuery("")}
+              aria-label="Xoá tìm kiếm"
+            >
+              <X size={14} />
+            </button>
+          )}
         </label>
         <select
           className="filter-select"
@@ -74,22 +85,51 @@ export default function Library() {
             </option>
           ))}
         </select>
+        <span className="library-result-count" aria-live="polite">
+          {filtered.length}/{lessons.length} bài
+        </span>
       </div>
 
       {filtered.length === 0 ? (
         <div className="empty-panel">
           <BookOpen size={20} />
-          <p>Không có bài học nào khớp. Tạo bài mới để bắt đầu.</p>
-          <button type="button" className="btn btn-primary" onClick={() => setView("create")}>
-            TẠO BÀI HỌC
-          </button>
+          <p>
+            {lessons.length === 0
+              ? "Thư viện đang trống. Tạo bài học đầu tiên để bắt đầu."
+              : "Không có bài học nào khớp với tìm kiếm hoặc bộ lọc hiện tại."}
+          </p>
+          {lessons.length > 0 ? (
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={() => {
+                setQuery("");
+                setSubjectFilter("all");
+              }}
+            >
+              XOÁ BỘ LỌC
+            </button>
+          ) : (
+            <button type="button" className="btn btn-primary" onClick={() => setView("create")}>
+              TẠO BÀI HỌC
+            </button>
+          )}
         </div>
       ) : (
         <div className="library-groups">
           {groupKeys.map((subject) => (
             <section className="library-group" key={subject}>
               <div className="library-group-head">
-                <span>{subject}</span>
+                <span className="library-group-title">
+                  <i
+                    aria-hidden="true"
+                    style={{
+                      background: subjectAccent(subject),
+                      boxShadow: `0 0 10px -2px ${subjectAccent(subject)}`,
+                    }}
+                  />
+                  {subject}
+                </span>
                 <span>{grouped[subject].length}</span>
               </div>
               <div className="library-list">

@@ -33,6 +33,7 @@ export interface SolarHover {
 interface Props {
   model: SolarModel;
   focus: SolarFocus;
+  ambient?: boolean;
   inset?: number;
   insetY?: number;
   onFocus: (focus: SolarFocus) => void;
@@ -105,6 +106,7 @@ interface Bundle {
   applyFocus: (focus: SolarFocus) => void;
   setInset: (inset: number) => void;
   setInsetY: (inset: number) => void;
+  setAmbient: (value: boolean) => void;
   inset: number;
   insetY: number;
   dispose: () => void;
@@ -364,6 +366,7 @@ function makeMoon(chapter: SolarChapter): THREE.Group {
 export default function SolarSystem({
   model,
   focus,
+  ambient = false,
   inset = 0,
   insetY = 0,
   onFocus,
@@ -376,11 +379,12 @@ export default function SolarSystem({
   const hostRef = useRef<HTMLDivElement>(null);
   const labelsRef = useRef<HTMLDivElement>(null);
   const bundleRef = useRef<Bundle | null>(null);
-  const propsRef = useRef({ model, focus, inset, insetY, onFocus, onHover, onOpenStation, onOpenSun, onReady, onFallback });
+  const propsRef = useRef({ model, focus, ambient, inset, insetY, onFocus, onHover, onOpenStation, onOpenSun, onReady, onFallback });
   const elapsedRef = useRef(0);
   const frozenPlanetRef = useRef(0);
   const frozenChapterRef = useRef(0);
   const focusRef = useRef(focus);
+  const ambientRef = useRef(false);
   const prevFocusRef = useRef<SolarFocus | null>(null);
   const hoverRef = useRef<{ kind: SolarHover["kind"]; planetId: PlanetId | null; chapterId: string | null } | null>(null);
   const hoverKeyRef = useRef("");
@@ -391,7 +395,7 @@ export default function SolarSystem({
   });
 
   useEffect(() => {
-    propsRef.current = { model, focus, inset, insetY, onFocus, onHover, onOpenStation, onOpenSun, onReady, onFallback };
+    propsRef.current = { model, focus, ambient, inset, insetY, onFocus, onHover, onOpenStation, onOpenSun, onReady, onFallback };
   });
 
   /* ------------------------------ dựng scene ------------------------------ */
@@ -695,6 +699,7 @@ export default function SolarSystem({
       applyFocus: () => undefined,
       setInset: () => undefined,
       setInsetY: () => undefined,
+      setAmbient: () => undefined,
       dispose: () => undefined,
     };
 
@@ -1103,6 +1108,32 @@ export default function SolarSystem({
     };
 
     bundle.applyFocus = applyFocus;
+
+    /* Góc nhìn thẳng từ trên xuống cho chế độ nền: trọn vẹn quỹ đạo mọi hành tinh. */
+    const topDownPose = (): Pose => {
+      const maxOrbit = PLANETS.reduce((max, item) => Math.max(max, item.orbit), 1) * 1.16;
+      const tanHalf = Math.tan((camera.fov * Math.PI) / 360);
+      const distance = Math.max(maxOrbit / tanHalf, maxOrbit / (tanHalf * Math.max(0.4, camera.aspect)));
+      return {
+        position: new THREE.Vector3(0, distance, distance * 0.002),
+        target: new THREE.Vector3(0, 0, 0),
+      };
+    };
+
+    bundle.setAmbient = (value) => {
+      if (ambientRef.current === value) return;
+      ambientRef.current = value;
+      labelsHost.style.visibility = value ? "hidden" : "";
+      if (value) {
+        hoverRef.current = null;
+        hoverKeyRef.current = "";
+        propsRef.current.onHover(null);
+        setPose(topDownPose());
+      } else {
+        applyFocus(focusRef.current, true);
+      }
+    };
+
     bundle.setInset = (value) => {
       const next = Math.max(0, Math.round(value));
       if (next === bundle.inset) return;
@@ -1304,7 +1335,8 @@ export default function SolarSystem({
       renderer.setPixelRatio(pixelRatio());
       renderer.setSize(width, height, false);
       if (prevFocusRef.current && Math.abs(camera.aspect - previousAspect) > 0.08) {
-        applyFocus(focusRef.current, true);
+        if (ambientRef.current) setPose(topDownPose(), true);
+        else applyFocus(focusRef.current, true);
       }
     };
     const observer = new ResizeObserver(resize);
@@ -1328,6 +1360,7 @@ export default function SolarSystem({
     };
 
     const updateLabels = () => {
+      if (ambientRef.current) return;
       const current = focusRef.current;
       const minX = bundle.inset - 4;
       const tanHalf = Math.tan(((camera.fov * Math.PI) / 180) / 2);
@@ -1487,11 +1520,25 @@ export default function SolarSystem({
         controls.target.lerpVectors(flight.from.target, flight.to.target, t);
         if (flight.t >= 1) {
           flight = null;
-          controls.enabled = true;
+          controls.enabled = !ambientRef.current;
         }
       }
 
-      controls.update();
+      if (ambientRef.current) {
+        /* Nền động: quay chậm quanh trục để cảnh không đứng yên ở các trang khác. */
+        if (!flight && !reducedMotion) {
+          const angle = delta * 0.035;
+          const cos = Math.cos(angle);
+          const sin = Math.sin(angle);
+          const x = camera.position.x * cos - camera.position.z * sin;
+          const z = camera.position.x * sin + camera.position.z * cos;
+          camera.position.x = x;
+          camera.position.z = z;
+        }
+        camera.lookAt(controls.target);
+      } else {
+        controls.update();
+      }
 
       fillLight.position.copy(camera.position);
       fillLight.target.position.copy(controls.target);
@@ -1564,6 +1611,10 @@ export default function SolarSystem({
   useEffect(() => {
     bundleRef.current?.setInsetY(insetY);
   }, [insetY]);
+
+  useEffect(() => {
+    bundleRef.current?.setAmbient(Boolean(ambient));
+  }, [ambient]);
 
   return (
     <div className="solar-scene" ref={hostRef}>

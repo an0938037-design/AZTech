@@ -14,6 +14,7 @@ import {
   chapterById,
   markStationVisited,
   percent,
+  PLANET_ACCENT,
   planetById,
   solarModel,
   SYSTEM_FOCUS,
@@ -55,6 +56,21 @@ export default function SolarDashboard({ ambient = false }: { ambient?: boolean 
   const [panelInset, setPanelInset] = useState(0);
   const [panelInsetY, setPanelInsetY] = useState(0);
   const pageRef = useRef<HTMLDivElement>(null);
+  const aiInputRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      setAiOpen(false);
+      setPanelOpen(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
+
+  useEffect(() => {
+    if (aiOpen) aiInputRef.current?.focus();
+  }, [aiOpen]);
 
   const model = useMemo(() => {
     void progressRev;
@@ -185,6 +201,7 @@ export default function SolarDashboard({ ambient = false }: { ambient?: boolean 
       <div className="solar-stage">
         <SolarSystem
           model={model}
+          ambient={ambient}
           focus={sceneFocus}
           inset={panelInset}
           insetY={panelInsetY}
@@ -299,9 +316,14 @@ export default function SolarDashboard({ ambient = false }: { ambient?: boolean 
             <Search size={13} />
             <input
               value={query}
-              onChange={(event) => setQuery(event.target.value)}
+              onChange={(event) => {
+                setQuery(event.target.value);
+                setPanelOpen(Boolean(event.target.value));
+              }}
               placeholder="TÌM HÀNH TINH, CHƯƠNG HỌC…"
               aria-label="Tìm hành tinh hoặc chương học"
+              aria-controls="solar-index-panel"
+              aria-expanded={panelOpen}
             />
             {query && (
               <button type="button" onClick={() => setQuery("")} aria-label="Xoá tìm kiếm">
@@ -317,6 +339,8 @@ export default function SolarDashboard({ ambient = false }: { ambient?: boolean 
             type="button"
             className={`solar-action ${aiOpen ? "is-active" : ""}`}
             onClick={() => setAiOpen((value) => !value)}
+            aria-expanded={aiOpen}
+            aria-controls="az-ai-panel"
           >
             <Sparkles size={14} />
             <span>AZ AI</span>
@@ -325,13 +349,20 @@ export default function SolarDashboard({ ambient = false }: { ambient?: boolean 
             type="button"
             className="solar-action solar-action-menu"
             onClick={() => setPanelOpen((value) => !value)}
+            aria-expanded={panelOpen}
+            aria-controls="solar-index-panel"
           >
             <span>DANH MỤC</span>
           </button>
         </div>
 
         {searchResults ? (
-          <aside className={`solar-side ${panelOpen ? "is-open" : ""}`}>
+          <aside
+            className={`solar-side ${panelOpen ? "is-open" : ""}`}
+            id="solar-index-panel"
+            aria-hidden={!panelOpen}
+            inert={!panelOpen}
+          >
             <div className="solar-panel-head">
               <span>KẾT QUẢ</span>
               <span>{searchResults.planets.length + searchResults.chapters.length}</span>
@@ -345,6 +376,14 @@ export default function SolarDashboard({ ambient = false }: { ambient?: boolean 
                   onClick={() => goPlanet(item.spec.id)}
                 >
                   <span className="solar-order">{String(item.spec.order).padStart(2, "0")}</span>
+                  <span
+                    className="solar-dot"
+                    aria-hidden="true"
+                    style={{
+                      background: PLANET_ACCENT[item.spec.id],
+                      boxShadow: `0 0 10px -2px ${PLANET_ACCENT[item.spec.id]}`,
+                    }}
+                  />
                   <span className="solar-row-main">
                     <b>{item.spec.name}</b>
                     <em>{item.subjectLabel}</em>
@@ -379,7 +418,12 @@ export default function SolarDashboard({ ambient = false }: { ambient?: boolean 
             </div>
           </aside>
         ) : (
-          <aside className={`solar-side ${panelOpen ? "is-open" : ""}`}>
+          <aside
+            className={`solar-side ${panelOpen ? "is-open" : ""}`}
+            id="solar-index-panel"
+            aria-hidden={!panelOpen}
+            inert={!panelOpen}
+          >
             {focus.level === "system" && (
               <>
                 <div className="solar-panel-head">
@@ -397,6 +441,14 @@ export default function SolarDashboard({ ambient = false }: { ambient?: boolean 
                         onClick={() => goPlanet(item.spec.id)}
                       >
                         <span className="solar-order">{String(item.spec.order).padStart(2, "0")}</span>
+                        <span
+                          className="solar-dot"
+                          aria-hidden="true"
+                          style={{
+                            background: PLANET_ACCENT[item.spec.id],
+                            boxShadow: `0 0 10px -2px ${PLANET_ACCENT[item.spec.id]}`,
+                          }}
+                        />
                         <span className="solar-row-main">
                           <b>{item.spec.name}</b>
                           <em>{item.subjectLabel}</em>
@@ -559,7 +611,7 @@ export default function SolarDashboard({ ambient = false }: { ambient?: boolean 
         )}
 
         {aiOpen && (
-          <section className="solar-ai" aria-label="AZ AI">
+          <section className="solar-ai" id="az-ai-panel" aria-label="AZ AI">
             <div className="solar-ai-head">
               <div>
                 <span className="solar-eyebrow">TRÍ TUỆ TRUNG TÂM</span>
@@ -576,6 +628,7 @@ export default function SolarDashboard({ ambient = false }: { ambient?: boolean 
             <label className="solar-ai-input">
               <span>BẠN MUỐN HỌC GÌ?</span>
               <textarea
+                ref={aiInputRef}
                 value={aiText}
                 onChange={(event) => setAiText(event.target.value)}
                 rows={3}

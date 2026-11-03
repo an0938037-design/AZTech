@@ -11,7 +11,8 @@ import {
   X,
 } from "lucide-react";
 import { useStore } from "../store";
-import { SUBJECTS, TOPIC_SUGGESTIONS, subjectMeta } from "../subjects";
+import { SUBJECTS, TOPIC_SUGGESTIONS, subjectMeta, subjectAccent } from "../subjects";
+import type { CSSProperties } from "react";
 
 export default function CreateLesson() {
   const subject = useStore((s) => s.subject);
@@ -30,11 +31,21 @@ export default function CreateLesson() {
   const [fileError, setFileError] = useState<string | null>(null);
 
   const suggestions = TOPIC_SUGGESTIONS[subject] ?? [];
-  const canGenerate = topic.trim().length > 1 && !generating;
+  const topicLength = topic.trim().length;
+  const canGenerate = topicLength > 1 && !generating;
   const activeProvider = account?.activeProvider ?? null;
   const providerConfig = activeProvider ? account?.ai[activeProvider] : null;
   const providerLabel =
     activeProvider === "openrouter" ? "OpenRouter" : "Gemini";
+  const generateHint = generating
+    ? "Pipeline đang chạy. Bạn có thể theo dõi từng bước trên màn hình."
+    : topicLength === 0
+      ? "Nhập chủ đề ở bước 02 để mở nút tạo bài."
+      : topicLength < 2
+        ? "Chủ đề cần ít nhất 2 ký tự."
+        : account && !providerConfig?.hasKey
+          ? "Có thể tạo bản cục bộ ngay; thêm API key nếu muốn nội dung AI đầy đủ."
+          : "Sẵn sàng tạo bài. Ghi chú và tài liệu đều không bắt buộc.";
 
   const handleFile = async (file: File | undefined) => {
     if (!file) return;
@@ -96,6 +107,7 @@ export default function CreateLesson() {
                     key={item.name}
                     className={`subject-option ${active ? "is-active" : ""}`}
                     onClick={() => setField("subject", item.name)}
+                    style={{ "--subject-accent": subjectAccent(item.name) } as CSSProperties}
                   >
                     <span className="subject-option-code">{item.short}</span>
                     <span>{item.name}</span>
@@ -121,6 +133,8 @@ export default function CreateLesson() {
               placeholder={`Ví dụ: ${suggestions[0] ?? "Cấu trúc tế bào"}`}
               maxLength={140}
               autoFocus
+              aria-label="Chủ đề bài học"
+              aria-describedby="create-action-hint"
             />
             {suggestions.length > 0 && (
               <div className="suggestion-row">
@@ -246,11 +260,19 @@ export default function CreateLesson() {
           </section>
 
           <div className="create-actions">
+            <p
+              className={`create-action-hint ${canGenerate ? "is-ready" : ""}`}
+              id="create-action-hint"
+              aria-live="polite"
+            >
+              {generateHint}
+            </p>
             <button
               type="button"
               className="btn btn-primary btn-lg"
               disabled={!canGenerate}
               onClick={() => void generate()}
+              aria-describedby="create-action-hint"
             >
               <Sparkles size={16} />
               {generating ? "ĐANG CHẠY PIPELINE…" : "TẠO BÀI HỌC"}
@@ -341,12 +363,6 @@ export default function CreateLesson() {
             </div>
           </section>
 
-          <section className="panel panel-subtle">
-            <span className="kicker">MÔN ĐANG CHỌN</span>
-            <p className="panel-note">
-              <strong>{subjectMeta(subject).name}</strong>
-            </p>
-          </section>
         </aside>
       </div>
     </div>

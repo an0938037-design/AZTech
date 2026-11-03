@@ -42,6 +42,23 @@ export function subjectCode(name: string): string {
   return subjectMeta(name).short;
 }
 
+/* Mỗi môn gắn với một hành tinh trong hệ mặt trời; màu dùng làm mã nhận diện. */
+const SUBJECT_ACCENT: Record<string, string> = {
+  Toán: "#e3cea4",
+  "Ngữ Văn": "#e8c47a",
+  "Vật Lý": "#d8b98d",
+  "Hoá Học": "#4d7dff",
+  "Sinh Học": "#5ba9ff",
+  "Lịch Sử": "#d2764a",
+  "Tin học văn phòng": "#b8b2a6",
+  "Tin học Lập Trình": "#b8b2a6",
+  "Tiếng Anh": "#e8c47a",
+};
+
+export function subjectAccent(name: string): string {
+  return SUBJECT_ACCENT[name] ?? "#9fb4d8";
+}
+
 export const TOPIC_SUGGESTIONS: Record<string, string[]> = {
   "Toán": ["Hàm số bậc hai", "Đạo hàm và ứng dụng", "Xác suất cơ bản"],
   "Ngữ Văn": ["Phân tích tác phẩm", "Nghị luận xã hội", "Biện pháp tu từ"],
