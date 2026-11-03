@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>GeoLab Drag & Drop — Hình học không gian 3D</title>
+<style>
+  :root {
+    --bg: #12121e;
+    --bg-2: #1a1a2e;
+    --bg-3: #22223a;
+    --line: #3a3a55;
+    --line-soft: #2a2a40;
+    --ink: #e8e8f0;
+    --ink-2: #b8b8cc;
+    --ink-3: #7777aa;
+    --ink-4: #555577;
+    --accent: #6c5ce7;
+    --accent-2: #a29bfe;
+    --danger: #e74c3c;
+    --success: #2ed573;
+    --warn: #ffa502;
+    --sans: "Segoe UI", system-ui, -apple-system, sans-serif;
+    --mono: "Consolas", "Courier New", monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(--ink); font-family: var(--sans); }
+  body { cursor: default; }
+
+  /* Toolbar */
+  #toolbar {
+    position: absolute; bottom: 24px; left: 50%;
+    transform: translateX(-50%);
+    display: flex; align-items: center; gap: 4px;
+    background: rgba(16,16,28,0.96);
+    border: 1px solid #3a3a55; border-radius: 14px;
+    padding: 8px 14px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+    backdrop-filter: blur(12px);
+    z-index: 100;
+  }
+  .tool-btn {
+    display: flex; flex-direction: column; align-items: center;
+    gap: 3px; padding: 8px 11px;
+    background: transparent; border: 1px solid transparent;
+    border-radius: 8px; color: #7777aa;
+    cursor: pointer; font-size: 16px;
+    transition: all 0.15s ease;
+  }
+  .tool-btn span { font-size: 9px; text-transform: uppercase; letter-spacing: 0.6px; font-family: var(--mono); }
+  .tool-btn:hover { background: rgba(108,92,231,0.18); border-color: rgba(108,92,231,0.5); color: #ddd; }
+  .tool-btn.active { background: rgba(108,92,231,0.35); border-color: #6c5ce7; color: #fff; box-shadow: 0 0 14px rgba(108,92,231,0.45); }
+  .tool-btn.toggle.active { background: rgba(46,213,115,0.25); border-color: #2ed573; color: #2ed573; }
+  .tool-btn.danger:hover { background: rgba(231,76,60,0.2); border-color: #e74c3c; color: #e74c3c; }
+  .tb-divider { width: 1px; height: 38px; background: #2a2a3a; margin: 0 3px; }
+
+  /* Cursor per tool */
+  body[data-tool="point"]    { cursor: crosshair; }
+  body[data-tool="line"]     { cursor: crosshair; }
+  body[data-tool="sphere"]   { cursor: cell; }
+  body[data-tool="cylinder"] { cursor: cell; }
+  body[data-tool="cuboid"]   { cursor: cell; }
+
+  #status-bar {
+    position: absolute; bottom: 90px; left: 50%; transform: translateX(-50%);
+    background: rgba(16,16,28,0.85); color: #aaaacc;
+    padding: 4px 14px; border-radius: 20px;
+    font-size: 12px; pointer-events: none;
+    opacity: 0; transition: opacity 0.2s; z-index: 100;
+  }
+  #status-bar.visible { opacity: 1; }
+
+  #drag-tooltip {
+    position: absolute; display: none;
+    background: rgba(108,92,231,0.92); color: #fff;
+    padding: 5px 10px; border-radius: 6px;
+    font: 12px/1.4 monospace; pointer-events: none;
+    transform: translate(14px, -50%); z-index: 200;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.4);
+  }
+
+  /* Info panel */
+  #info-panel {
+    position: absolute; top: 12px; left: 12px;
+    background: rgba(16,16,28,0.85); border: 1px solid #3a3a55;
+    border-radius: 8px; padding: 10px 14px;
+    font-size: 11px; font-family: var(--mono);
+    color: var(--ink-2); z-index: 100;
+    max-width: 260px;
+  }
+  #info-panel h3 { font-size: 10px; letter-spacing: 0.12em; color: var(--ink-3); text-transform: uppercase; margin-bottom: 6px; }
+  #info-panel .obj-count { color: var(--accent-2); font-weight: 700; }
+
+  /* Labels */
+  .css2d-label {
+    color: #fff; font-size: 11px; font-family: monospace;
+    background: rgba(0,0,0,0.55); padding: 2px 6px;
+    border-radius: 4px; white-space: nowrap;
+    pointer-events: none;
+  }
+
+  /* Responsive */
+  @media (max-width: 600px) {
+    #toolbar { bottom: 12px; padding: 6px 10px; gap: 2px; }
+    .tool-btn { padding: 6px 8px; font-size: 14px; }
+    .tool-btn span { font-size: 8px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="info-panel">
+  <h3>GeoLab Drag & Drop</h3>
+  <div>Đối tượng: <span class="obj-count" id="obj-count">0</span></div>
+  <div style="margin-top:6px; color:var(--ink-4); font-size:10px;">
+    V: Chọn · P: Điểm · L: Đoạn · C: Cầu · Y: Trụ · B: Hộp · G: Snap · Del: Xóa
+  </div>
+</div>
+
+<div id="toolbar">
+  <button class="tool-btn active" data-tool="select" title="Chọn (V)">↖<span>Chọn</span></button>
+  <div class="tb-divider"></div>
+  <button class="tool-btn" data-tool="point" title="Điểm (P)">●<span>Điểm</span></button>
+  <button class="tool-btn" data-tool="line" title="Đoạn (L)">╱<span>Đoạn</span></button>
+  <div class="tb-divider"></div>
+  <button class="tool-btn" data-tool="sphere" title="Cầu (C)">◉<span>Cầu</span></button>
+  <button class="tool-btn" data-tool="cylinder" title="Trụ (Y)">⬭<span>Trụ</span></button>
+  <button class="tool-btn" data-tool="cuboid" title="Hộp (B)">⬜<span>Hộp</span></button>
+  <div class="tb-divider"></div>
+  <button class="tool-btn toggle active" id="btn-snap" title="Snap Grid (G)">⊞<span>Snap</span></button>
+  <button class="tool-btn danger" id="btn-del" title="Xóa (Del)">✕<span>Xóa</span></button>
+</div>
+
+<div id="status-bar"></div>
+<div id="drag-tooltip"><span id="tooltip-text"></span></div>
+
+<!-- Three.js r128 -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/TransformControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/renderers/CSS2DRenderer.js"></script>
+
+<script>
+// ============================================================
+//  GeoLab Drag & Drop — Three.js r128
+// ============================================================
+
+const TOOLS = { SELECT:'select', POINT:'point', LINE:'line', SPHERE:'sphere', CYLINDER:'cylinder', CUBOID:'cuboid' };
+const TOOL_SHORTCUTS = { 'v':TOOLS.SELECT, 'p':TOOLS.POINT, 'l':TOOLS.LINE, 'c':TOOLS.SPHERE, 'y':TOOLS.CYLINDER, 'b':TOOLS.CUBOID, 'g':null };
+
+const SNAP_CONFIG = { enabled: true, gridSize: 1.0, threshold: 0.45 };
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x1a1a24);
+
+const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 1000);
+camera.position.set(9, 9, 9);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(window.devicePixelRatio);
+document.body.appendChild(renderer.domElement);
+
+// CSS2DRenderer for labels
+const labelRenderer = new THREE.CSS2DRenderer();
+labelRenderer.setSize(window.innerWidth, window.innerHeight);
+Object.assign(labelRenderer.domElement.style, { position:'absolute', top:'0', pointerEvents:'none' });
+document.body.appendChild(labelRenderer.domElement);
+
+// OrbitControls
+const orbitControls = new THREE.OrbitControls(camera, renderer.domElement);
+orbitControls.enableDamping = true;
+orbitControls.dampingFactor = 0.08;
+
+// TransformControls
+const transformControl = new THREE.TransformControls(camera, renderer.domElement);
+transformControl.setMode('translate');
+transformControl.setSpace('world');
+scene.add(transformControl);
+
+// Prevent OrbitControls conflict
+transformControl.addEventListener('dragging-changed', (e) => {
+  orbitControls.enabled = !e.value;
+});
+
+// Lights
+scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+const dirLight = new THREE.DirectionalLight(0xffffff, 0.85);
+dirLight.position.set(10, 15, 10);
+scene.add(dirLight);
+const dirLight2 = new THREE.DirectionalLight(0x4a9eff, 0.3);
+dirLight2.position.set(-8, 5, -8);
+scene.add(dirLight2);
+
+// Axes
+const axesHelper = new THREE.AxesHelper(6);
+scene.add(axesHelper);
+
+// Grid
+const gridHelper = new THREE.GridHelper(20, 20, 0x3a3a55, 0x252535);
+scene.add(gridHelper);
+
+// Selection & registry
+const SELECTABLE_LAYER = 1;
+const selectables = [];
+let selected = null;
+const objectRegistry = new Map();
+let _uid = 0;
+const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+
+// Raycaster
+const raycaster = new THREE.Raycaster();
+raycaster.layers.set(SELECTABLE_LAYER);
+raycaster.params.Points = { threshold: 0.3 };
+
+const mouse = new THREE.Vector2();
+
+function updateMouse(e) {
+  mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+  mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+}
+
+function getGroundHit(e) {
+  updateMouse(e);
+  raycaster.setFromCamera(mouse, camera);
+  const target = new THREE.Vector3();
+  raycaster.ray.intersectPlane(groundPlane, target);
+  return target;
+}
+
+function snapPosition(pos) {
+  if (!SNAP_CONFIG.enabled) return pos;
+  pos.x = Math.round(pos.x / SNAP_CONFIG.gridSize) * SNAP_CONFIG.gridSize;
+  pos.y = Math.round(pos.y / SNAP_CONFIG.gridSize) * SNAP_CONFIG.gridSize;
+  pos.z = Math.round(pos.z / SNAP_CONFIG.gridSize) * SNAP_CONFIG.gridSize;
+  return pos;
+}
+
+function snapObjectToGrid(mesh) {
+  if (!SNAP_CONFIG.enabled) return;
+  const snapped = snapPosition(mesh.position.clone());
+  if (mesh.position.distanceTo(snapped) < SNAP_CONFIG.threshold) {
+    mesh.position.copy(snapped);
+  }
+}
+
+// Selection highlight (backside scale)
+function applySelectionHighlight(mesh) {
+  const outline = new THREE.Mesh(mesh.geometry, new THREE.MeshBasicMaterial({ color: 0x6c5ce7, side: THREE.BackSide }));
+  outline.scale.setScalar(1.09);
+  outline.name = '_sel_outline';
+  mesh.add(outline);
+}
+
+function clearSelectionHighlight(mesh) {
+  const o = mesh.getObjectByName('_sel_outline');
+  if (o) mesh.remove(o);
+  if (mesh.material && mesh.material.emissiveIntensity !== undefined) mesh.material.emissiveIntensity = 0;
+}
+
+function select(mesh) {
+  if (selected) clearSelectionHighlight(selected);
+  selected = mesh;
+  transformControl.attach(mesh);
+  applySelectionHighlight(mesh);
+  document.dispatchEvent(new CustomEvent('scene:select', { detail: mesh }));
+}
+
+function deselect() {
+  if (selected) clearSelectionHighlight(selected);
+  selected = null;
+  transformControl.detach();
+  document.dispatchEvent(new CustomEvent('scene:deselect'));
+}
+
+// Object registry
+function registerObject(mesh, type) {
+  const id = type[0].toUpperCase() + (_uid++);
+  mesh.userData.id = id;
+  mesh.userData.type = type;
+  mesh.layers.enable(SELECTABLE_LAYER);
+  const label = createLabel(mesh, id);
+  objectRegistry.set(id, { mesh, type, label });
+  selectables.push(mesh);
+  updateObjectCount();
+  return id;
+}
+
+function deleteSelected() {
+  if (!selected) return;
+  const entry = objectRegistry.get(selected.userData.id);
+  transformControl.detach();
+  const idx = selectables.indexOf(selected);
+  if (idx > -1) selectables.splice(idx, 1);
+  if (entry && entry.label) selected.remove(entry.label);
+  scene.remove(selected);
+  objectRegistry.delete(selected.userData.id);
+  selected = null;
+  document.dispatchEvent(new CustomEvent('scene:deselect'));
+  updateObjectCount();
+}
+
+function updateObjectCount() {
+  document.getElementById('obj-count').textContent = objectRegistry.size;
+}
+
+// CSS2D Labels
+function createLabel(mesh, text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  Object.assign(div.style, { color:'#fff', fontSize:'11px', fontFamily:'monospace', background:'rgba(0,0,0,0.55)', padding:'2px 6px', borderRadius:'4px', whiteSpace:'nowrap' });
+  const label = new THREE.CSS2DObject(div);
+  label.position.set(0, 0.6, 0);
+  mesh.add(label);
+  return label;
+}
+
+// Factory functions
+function createPoint(x, y, z) {
+  const mesh = new THREE.Mesh(new THREE.SphereGeometry(0.22, 20, 20), new THREE.MeshStandardMaterial({ color: 0xe74c3c, roughness: 0.3 }));
+  mesh.position.set(x, y, z);
+  scene.add(mesh);
+  registerObject(mesh, 'point');
+  return mesh;
+}
+
+function createLine(p1, p2) {
+  const geo = new THREE.BufferGeometry().setFromPoints([p1, p2]);
+  const line = new THREE.Line(geo, new THREE.LineBasicMaterial({ color: 0x74b9ff, linewidth: 2 }));
+  scene.add(line);
+  createPoint(p1.x, p1.y, p1.z);
+  createPoint(p2.x, p2.y, p2.z);
+  registerObject(line, 'line');
+  return line;
+}
+
+function createSphere(center, radius) {
+  const mesh = new THREE.Mesh(new THREE.SphereGeometry(radius, 32, 32), new THREE.MeshStandardMaterial({ color: 0xa29bfe, transparent: true, opacity: 0.75, roughness: 0.4 }));
+  mesh.position.copy(center);
+  scene.add(mesh);
+  registerObject(mesh, 'sphere');
+  return mesh;
+}
+
+function createCylinder(center, radius, height) {
+  const mesh = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, height, 32), new THREE.MeshStandardMaterial({ color: 0x55efc4, transparent: true, opacity: 0.78, roughness: 0.4 }));
+  mesh.position.copy(center);
+  mesh.position.y += height / 2;
+  scene.add(mesh);
+  registerObject(mesh, 'cylinder');
+  return mesh;
+}
+
+function createCuboid(center, width, depth, height) {
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(width, height, depth), new THREE.MeshStandardMaterial({ color: 0xfd79a8, transparent: true, opacity: 0.78, roughness: 0.4 }));
+  mesh.position.copy(center);
+  mesh.position.y += height / 2;
+  scene.add(mesh);
+  registerObject(mesh, 'cuboid');
+  return mesh;
+}
+
+// Tool manager
+const toolManager = { current: TOOLS.SELECT, drawState: null, previewObjects: [] };
+function setTool(toolName) {
+  cancelDraw();
+  toolManager.current = toolName;
+  document.body.dataset.tool = toolName;
+  updateToolbarUI(toolName);
+}
+function cancelDraw() {
+  toolManager.drawState = null;
+  toolManager.previewObjects.forEach((o) => scene.remove(o));
+  toolManager.previewObjects = [];
+}
+function updateToolbarUI(activeTool) {
+  document.querySelectorAll('.tool-btn[data-tool]').forEach((btn) => {
+    btn.classList.toggle('active', btn.dataset.tool === activeTool);
+  });
+}
+
+// Status bar
+const statusBar = document.getElementById('status-bar');
+function showStatus(text) {
+  statusBar.textContent = text;
+  statusBar.classList.add('visible');
+}
+function hideStatus() {
+  statusBar.classList.remove('visible');
+}
+
+// Drag tooltip
+const tooltip = document.getElementById('drag-tooltip');
+const tooltipText = document.getElementById('tooltip-text');
+function showDragTooltip(e, position) {
+  tooltip.style.display = 'block';
+  tooltip.style.left = e.clientX + 'px';
+  tooltip.style.top = e.clientY + 'px';
+  tooltipText.textContent = `x: ${position.x.toFixed(2)}  y: ${position.y.toFixed(2)}  z: ${position.z.toFixed(2)}`;
+}
+function hideDragTooltip() { tooltip.style.display = 'none'; }
+
+// TransformControls events
+transformControl.addEventListener('dragging-changed', (e) => {
+  orbitControls.enabled = !e.value;
+});
+transformControl.addEventListener('objectChange', () => {
+  if (!transformControl.object) return;
+  snapObjectToGrid(transformControl.object);
+});
+
+// Hover
+let hoveredObject = null;
+renderer.domElement.addEventListener('pointermove', (e) => {
+  if (toolManager.current !== TOOLS.SELECT) return;
+  updateMouse(e);
+  raycaster.setFromCamera(mouse, camera);
+  const hits = raycaster.intersectObjects(selectables);
+  const newHover = hits.length > 0 ? hits[0].object : null;
+  if (newHover === hoveredObject) return;
+  if (hoveredObject && hoveredObject !== selected) {
+    hoveredObject.material.emissiveIntensity = 0;
+  }
+  if (newHover && newHover !== selected) {
+    newHover.material.emissive.setHex(0xffffff);
+    newHover.material.emissiveIntensity = 0.22;
+    renderer.domElement.style.cursor = 'pointer';
+  } else {
+    renderer.domElement.style.cursor = '';
+  }
+  hoveredObject = newHover;
+});
+
+// Selection events
+renderer.domElement.addEventListener('pointerdown', (e) => {
+  if (e.button !== 0) return;
+  if (transformControl.dragging) return;
+  updateMouse(e);
+  raycaster.setFromCamera(mouse, camera);
+  const hits = raycaster.intersectObjects(selectables);
+  if (hits.length > 0) {
+    select(hits[0].object);
+  } else {
+    const point = getGroundHit(e);
+    const snapped = SNAP_CONFIG.enabled ? snapPosition(point.clone()) : point;
+    document.dispatchEvent(new CustomEvent('scene:click-empty', { detail: { point: snapped, event: e } }));
+  }
+});
+
+// Tool: POINT
+document.addEventListener('scene:click-empty', ({ detail: { point } }) => {
+  if (toolManager.current === TOOLS.POINT) {
+    const mesh = createPoint(point.x, point.y, point.z);
+    select(mesh);
+    setTool(TOOLS.SELECT);
+  }
+});
+
+// Tool: LINE (2-click)
+renderer.domElement.addEventListener('pointermove', (e) => {
+  const state = toolManager.drawState;
+  if (!state || state.type !== 'line') return;
+  const current = getGroundHit(e);
+  const pts = state.previewLine.geometry.attributes.position;
+  pts.setXYZ(1, current.x, current.y, current.z);
+  pts.needsUpdate = true;
+  const dist = state.p1.distanceTo(current).toFixed(2);
+  showStatus(`Độ dài: ${dist} đơn vị`);
+});
+
+// Tool: SPHERE (click-drag radius)
+renderer.domElement.addEventListener('pointerdown', (e) => {
+  if (toolManager.current !== TOOLS.SPHERE || e.button !== 0) return;
+  const center = getGroundHit(e);
+  const preview = new THREE.Mesh(new THREE.SphereGeometry(1, 12, 12), new THREE.MeshBasicMaterial({ color: 0xffa500, wireframe: true }));
+  preview.position.copy(center);
+  scene.add(preview);
+  toolManager.previewObjects.push(preview);
+  toolManager.drawState = { center, preview, type: 'sphere' };
+});
+
+renderer.domElement.addEventListener('pointermove', (e) => {
+  const state = toolManager.drawState;
+  if (!state || state.type !== 'sphere') return;
+  const current = getGroundHit(e);
+  const radius = Math.max(0.2, state.center.distanceTo(current));
+  state.preview.scale.setScalar(radius);
+  showStatus(`Bán kính: ${radius.toFixed(2)} đơn vị`);
+});
+
+renderer.domElement.addEventListener('pointerup', (e) => {
+  const state = toolManager.drawState;
+  if (!state || state.type !== 'sphere') return;
+  const current = getGroundHit(e);
+  const radius = Math.max(0.2, state.center.distanceTo(current));
+  cancelDraw();
+  const mesh = createSphere(state.center, radius);
+  select(mesh);
+  setTool(TOOLS.SELECT);
+  hideStatus();
+});
+
+// Tool: CYLINDER (2-step)
+renderer.domElement.addEventListener('pointerdown', (e) => {
+  if (toolManager.current !== TOOLS.CYLINDER || e.button !== 0) return;
+  const state = toolManager.drawState;
+  if (!state) {
+    const center = getGroundHit(e);
+    const preview = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.1, 12), new THREE.MeshBasicMaterial({ color: 0x55efc4, wireframe: true }));
+    preview.position.copy(center);
+    scene.add(preview);
+    toolManager.previewObjects.push(preview);
+    toolManager.drawState = { step: 1, center, radius: 0, preview, type: 'cylinder' };
+    showStatus('Bước 1: Kéo để đặt bán kính đáy');
+    return;
+  }
+  if (state.step === 2) {
+    const height = Math.max(0.2, Math.abs(getGroundHit(e).y - state.center.y));
+    // use horizontal distance for height approximation
+    const h = Math.max(0.2, state.center.distanceTo(getGroundHit(e)));
+    cancelDraw();
+    createCylinder(state.center, state.radius, h);
+    select(selectables[selectables.length - 1]);
+    setTool(TOOLS.SELECT);
+    hideStatus();
+  }
+});
+
+renderer.domElement.addEventListener('pointermove', (e) => {
+  const state = toolManager.drawState;
+  if (!state || state.type !== 'cylinder') return;
+  const current = getGroundHit(e);
+  if (state.step === 1) {
+    const radius = Math.max(0.1, state.center.distanceTo(current));
+    state.radius = radius;
+    state.preview.geometry.dispose();
+    state.preview.geometry = new THREE.CylinderGeometry(radius, radius, 0.1, 12);
+    state.preview.position.copy(state.center);
+    showStatus(`Bán kính: ${radius.toFixed(2)}`);
+  } else if (state.step === 2) {
+    const height = Math.max(0.2, Math.abs(current.y - state.center.y) + 0.5);
+    state.preview.scale.y = height / 0.1;
+    showStatus(`Chiều cao: ${height.toFixed(2)}`);
+  }
+});
+
+renderer.domElement.addEventListener('pointerup', (e) => {
+  const state = toolManager.drawState;
+  if (!state || state.type !== 'cylinder' || state.step !== 1) return;
+  const current = getGroundHit(e);
+  const radius = Math.max(0.1, state.center.distanceTo(current));
+  state.radius = radius;
+  state.step = 2;
+  state.preview.geometry.dispose();
+  state.preview.geometry = new THREE.CylinderGeometry(radius, radius, 1, 12);
+  state.preview.position.copy(state.center);
+  showStatus('Bước 2: Kéo để đặt chiều cao, click để xác nhận');
+});
+
+// Tool: CUBOID (2-step)
+renderer.domElement.addEventListener('pointerdown', (e) => {
+  if (toolManager.current !== TOOLS.CUBOID || e.button !== 0) return;
+  const state = toolManager.drawState;
+  if (!state) {
+    const start = getGroundHit(e);
+    const preview = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, 0.1), new THREE.MeshBasicMaterial({ color: 0xfd79a8, wireframe: true }));
+    preview.position.copy(start);
+    scene.add(preview);
+    toolManager.previewObjects.push(preview);
+    toolManager.drawState = { step: 1, start, preview, type: 'cuboid' };
+    showStatus('Bước 1: Kéo để đặt footprint');
+    return;
+  }
+  if (state.step === 2) {
+    const current = getGroundHit(e);
+    const height = Math.max(0.2, Math.abs(current.y - state.start.y) + 1);
+    const width = Math.max(0.2, Math.abs(state.end.x - state.start.x));
+    const depth = Math.max(0.2, Math.abs(state.end.z - state.start.z));
+    const center = new THREE.Vector3((state.start.x + state.end.x) / 2, height / 2, (state.start.z + state.end.z) / 2);
+    cancelDraw();
+    createCuboid(center, width, depth, height);
+    select(selectables[selectables.length - 1]);
+    setTool(TOOLS.SELECT);
+    hideStatus();
+  }
+});
+
+renderer.domElement.addEventListener('pointermove', (e) => {
+  const state = toolManager.drawState;
+  if (!state || state.type !== 'cuboid') return;
+  const current = getGroundHit(e);
+  if (state.step === 1) {
+    state.end = current;
+    const width = Math.max(0.1, Math.abs(current.x - state.start.x));
+    const depth = Math.max(0.1, Math.abs(current.z - state.start.z));
+    state.preview.scale.set(width, 0.1, depth);
+    state.preview.position.set((state.start.x + current.x) / 2, 0.05, (state.start.z + current.z) / 2);
+    showStatus(`Footprint: ${width.toFixed(2)} × ${depth.toFixed(2)}`);
+  } else if (state.step === 2) {
+    const height = Math.max(0.2, Math.abs(current.y - state.start.y) + 1);
+    state.preview.scale.y = height / 0.1;
+    state.preview.position.y = height / 2;
+    showStatus(`Chiều cao: ${height.toFixed(2)}`);
+  }
+});
+
+renderer.domElement.addEventListener('pointerup', (e) => {
+  const state = toolManager.drawState;
+  if (!state || state.type !== 'cuboid' || state.step !== 1) return;
+  const current = getGroundHit(e);
+  state.end = current;
+  state.step = 2;
+  showStatus('Bước 2: Kéo để đặt chiều cao, click để xác nhận');
+});
+
+// Tool: LINE (2-click)
+let lineStep = 0;
+let lineP1 = null;
+let linePreview = null;
+
+renderer.domElement.addEventListener('pointerdown', (e) => {
+  if (toolManager.current !== TOOLS.LINE || e.button !== 0) return;
+  if (lineStep === 0) {
+    const p = getGroundHit(e);
+    const snapped = SNAP_CONFIG.enabled ? snapPosition(p.clone()) : p;
+    lineP1 = snapped;
+    linePreview = new THREE.Line(new THREE.BufferGeometry().setFromPoints([snapped, snapped]), new THREE.LineBasicMaterial({ color: 0xffa500, linewidth: 2 }));
+    scene.add(linePreview);
+    toolManager.previewObjects.push(linePreview);
+    toolManager.drawState = { type: 'line', p1: snapped, previewLine: linePreview, step: 1 };
+    lineStep = 1;
+    showStatus('Click điểm thứ 2 để hoàn thành đoạn thẳng');
+  } else {
+    const p2 = SNAP_CONFIG.enabled ? snapPosition(getGroundHit(e).clone()) : getGroundHit(e);
+    cancelDraw();
+    createLine(lineP1, p2);
+    select(selectables[selectables.length - 1]);
+    lineStep = 0;
+    lineP1 = null;
+    linePreview = null;
+    setTool(TOOLS.SELECT);
+    hideStatus();
+  }
+});
+
+renderer.domElement.addEventListener('pointermove', (e) => {
+  if (!toolManager.drawState || toolManager.drawState.type !== 'line') return;
+  const current = SNAP_CONFIG.enabled ? snapPosition(getGroundHit(e).clone()) : getGroundHit(e);
+  const pts = toolManager.drawState.previewLine.geometry.attributes.position;
+  pts.setXYZ(1, current.x, current.y, current.z);
+  pts.needsUpdate = true;
+  const dist = toolManager.drawState.p1.distanceTo(current).toFixed(2);
+  showStatus(`Độ dài: ${dist} đơn vị`);
+});
+
+// Keyboard shortcuts
+window.addEventListener('keydown', (e) => {
+  if (e.target.tagName === 'INPUT') return;
+  if (e.key === 'Escape') { cancelDraw(); deselect(); setTool(TOOLS.SELECT); hideStatus(); lineStep = 0; lineP1 = null; linePreview = null; return; }
+  if (e.key === 'Delete' || e.key === 'Backspace') { deleteSelected(); return; }
+  const tool = TOOL_SHORTCUTS[e.key.toLowerCase()];
+  if (tool) setTool(tool);
+  if (e.key.toLowerCase() === 't') transformControl.setMode('translate');
+  if (e.key.toLowerCase() === 'r') transformControl.setMode('rotate');
+  if (e.key.toLowerCase() === 's') transformControl.setMode('scale');
+});
+
+// Toolbar binding
+document.querySelectorAll('.tool-btn[data-tool]').forEach((btn) => {
+  btn.addEventListener('click', () => setTool(btn.dataset.tool));
+});
+document.getElementById('btn-snap').addEventListener('click', () => {
+  SNAP_CONFIG.enabled = !SNAP_CONFIG.enabled;
+  document.getElementById('btn-snap').classList.toggle('active', SNAP_CONFIG.enabled);
+});
+document.getElementById('btn-del').addEventListener('click', deleteSelected);
+
+// Object count update
+function updateObjCount() { document.getElementById('obj-count').textContent = objectRegistry.size; }
+
+// Animate
+function animate() {
+  requestAnimationFrame(animate);
+  orbitControls.update();
+  renderer.render(scene, camera);
+  labelRenderer.render(scene, camera);
+}
+animate();
+
+// Resize
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  labelRenderer.setSize(window.innerWidth, window.innerHeight);
+});
+</script>
+</body>
+</html>

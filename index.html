@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="AI Learning Engine — biến ghi chú thành bài giảng, sơ đồ tư duy và mô hình tương tác. Giao diện liquid glass, phòng lab 3D và hình học không gian."
+    />
+    <title>AI Learning Engine — Học sâu hơn, nhìn rõ hơn</title>
+  </head>
+  <body>
+    <script>
+      try {
+        var t = localStorage.getItem("theme") || "dark";
+        document.documentElement.setAttribute("data-theme", t);
+        document.documentElement.setAttribute("data-palette", localStorage.getItem("palette") || "1");
+      } catch (e) {}
+    </script>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
