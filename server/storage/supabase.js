@@ -2,8 +2,13 @@ const crypto = require("crypto");
 const { compressJson, decompressJson } = require("../lib/compress");
 const { defaultModel } = require("../lib/account");
 
-const BASE = (process.env.SUPABASE_URL || "").replace(/\/+$/, "");
-const KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+const BASE = (process.env.SUPABASE_URL || "")
+  .trim()
+  .replace(/\/+$/, "")
+  .replace(/\/rest\/v1$/i, "");
+const KEY = (process.env.SUPABASE_SERVICE_ROLE_KEY || "").trim();
+
+if (BASE) console.log("[supabase] base =", BASE);
 
 function configured() {
   return !!BASE && !!KEY;
