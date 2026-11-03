@@ -52,13 +52,13 @@ function rowToAccount(row, configs) {
 
 async function getAccount(code) {
   if (!code) return null;
-  const rows = await sb(
-    `accounts?code=eq.${encodeURIComponent(code)}&select=*`
-  );
+  /* Hai bảng độc lập nhau nên gọi song song: mỗi lượt roundtrip tới Supabase
+     đang tốn ~250ms, tuần tự sẽ cộng dồn thành gần 1 giây cho mỗi request. */
+  const [rows, configs] = await Promise.all([
+    sb(`accounts?code=eq.${encodeURIComponent(code)}&select=*`),
+    sb(`ai_configs?account_code=eq.${encodeURIComponent(code)}&select=*`),
+  ]);
   if (!rows?.[0]) return null;
-  const configs = await sb(
-    `ai_configs?account_code=eq.${encodeURIComponent(code)}&select=*`
-  );
   return rowToAccount(rows[0], configs);
 }
 

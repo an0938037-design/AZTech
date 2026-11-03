@@ -417,7 +417,9 @@ export default function SolarSystem({
     }
 
     const quality = window.matchMedia("(max-width: 760px)").matches ? "low" : "high";
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, quality === "low" ? 1.5 : 2));
+    /* Toàn màn hình + shadow map mềm: render ở 2x DPR làm GPU quá tải (đo được 17fps). */
+    const pixelRatio = () => Math.min(window.devicePixelRatio || 1, quality === "low" ? 1 : 1.5);
+    renderer.setPixelRatio(pixelRatio());
     renderer.setSize(host.clientWidth || 1, host.clientHeight || 1);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -1299,7 +1301,7 @@ export default function SolarSystem({
       bundle.height = height;
       camera.aspect = width / height;
       camera.updateProjectionMatrix();
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, quality === "low" ? 1.5 : 2));
+      renderer.setPixelRatio(pixelRatio());
       renderer.setSize(width, height, false);
       if (prevFocusRef.current && Math.abs(camera.aspect - previousAspect) > 0.08) {
         applyFocus(focusRef.current, true);
@@ -1354,6 +1356,23 @@ export default function SolarSystem({
       const sunPoint = project(new THREE.Vector3(0, 0, 0));
       const sunRadius = 1.5 * pxPerUnit(new THREE.Vector3());
 
+      /* Đọc kích thước mọi nhãn một lần trước khi ghi style: trộn đọc/ghi
+         offsetWidth với style.transform mỗi frame sẽ buộc layout lại liên tục. */
+      const sizes = new Map<HTMLElement, { w: number; h: number }>();
+      const sizeOf = (el: HTMLElement, dw: number, dh: number) => {
+        let size = sizes.get(el);
+        if (!size) {
+          size = { w: el.offsetWidth || dw, h: el.offsetHeight || dh };
+          sizes.set(el, size);
+        }
+        return size;
+      };
+      for (const entry of planets) {
+        sizeOf(entry.label, 96, 38);
+        for (const satellite of entry.satellites) sizeOf(satellite.label, 118, 30);
+      }
+      sizeOf(sunLabel, 106, 34);
+
       // Ẩn nhãn vệ tinh trước, chỉ bật vệ tinh thuộc tầng đang xem.
       for (const entry of planets) {
         for (const satellite of entry.satellites) satellite.label.style.opacity = "0";
@@ -1379,8 +1398,7 @@ export default function SolarSystem({
         const norm = Math.hypot(dx, dy) || 1;
         const offset = entry.spec.radius * pxPerUnit(world) + 15;
         const labelX = clamp(point.x + (dx / norm) * offset, 64, bundle.width - 64);
-        const w = entry.label.offsetWidth || 96;
-        const h = entry.label.offsetHeight || 38;
+        const { w, h } = sizeOf(entry.label, 96, 38);
         const labelY = clamp(
           place(labelX, point.y + (dy / norm) * offset, w, h),
           h / 2 + 8,
@@ -1391,8 +1409,7 @@ export default function SolarSystem({
       }
 
       // Nhãn Mặt Trời đặt sau cùng để không đẩy nhãn các hành tinh ra xa.
-      const sunW = sunLabel.offsetWidth || 106;
-      const sunH = sunLabel.offsetHeight || 34;
+      const { w: sunW, h: sunH } = sizeOf(sunLabel, 106, 34);
       const sunY = place(sunPoint.x, sunPoint.y + sunRadius + 10 + sunH / 2, sunW, sunH);
       sunLabel.style.transform = `translate3d(${sunPoint.x}px, ${sunY}px, 0) translate(-50%, -50%)`;
       sunLabel.style.opacity = current.level === "system" && sunPoint.visible ? "1" : "0";
@@ -1406,8 +1423,7 @@ export default function SolarSystem({
           const satPoint = project(satWorld);
           if (!satPoint.visible || !satellite.holder.visible || satPoint.x < minX) continue;
           const satOffset = satellite.size * pxPerUnit(satWorld) + 26;
-          const sw = satellite.label.offsetWidth || 118;
-          const sh = satellite.label.offsetHeight || 30;
+          const { w: sw, h: sh } = sizeOf(satellite.label, 118, 30);
           const lx = clamp(satPoint.x, bundle.inset + sw / 2 + 10, bundle.width - sw / 2 - 10);
           const ly = clamp(satPoint.y - satOffset, sh + 150, bundle.height - 14);
           satellite.label.style.opacity = "1";
@@ -1416,9 +1432,16 @@ export default function SolarSystem({
       }
     };
 
+    const pageEl = host.closest(".solar-page");
+    let lastRenderAt = 0;
+
     const animate = () => {
       raf = requestAnimationFrame(animate);
       const now = performance.now();
+      /* Ngoài trang chủ cảnh này chỉ là nền tĩnh: ~20fps là đủ, đỡ tốn GPU. */
+      if (document.hidden) return;
+      if (pageEl?.classList.contains("is-ambient") && now - lastRenderAt < 45) return;
+      lastRenderAt = now;
       const delta = Math.min((now - clock.last) / 1000, 0.06);
       clock.last = now;
       frame += 1;

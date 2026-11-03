@@ -108,6 +108,13 @@ body {
   position: relative;
   z-index: 1;
   min-width: 0;
+  /* Nền 3D cố định nằm dưới (z-index 0) nhưng vẫn có nav riêng; nội dung trong
+     app-content tự bật pointer-events nên chỉ vùng trống là xuyên qua được. */
+  pointer-events: none;
+}
+
+.app-main > .top-status {
+  pointer-events: auto;
 }
 
 .app-content {
