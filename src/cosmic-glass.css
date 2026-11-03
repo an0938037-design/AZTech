@@ -329,8 +329,8 @@ body {
   background: var(--glass-shell);
   border-right: 1px solid var(--glass-border);
   border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
-  backdrop-filter: blur(48px) saturate(190%);
-  -webkit-backdrop-filter: blur(48px) saturate(190%);
+  backdrop-filter: blur(16px) saturate(190%);
+  -webkit-backdrop-filter: blur(16px) saturate(190%);
   box-shadow:
     30px 0 90px -50px rgba(0, 0, 0, 0.95),
     var(--glass-highlight);
@@ -1099,8 +1099,8 @@ body {
   border: 1px solid var(--glass-border);
   border-radius: 14px;
   background: var(--glass-soft);
-  backdrop-filter: blur(20px) saturate(150%);
-  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  backdrop-filter: blur(10px) saturate(150%);
+  -webkit-backdrop-filter: blur(10px) saturate(150%);
   transition:
     background var(--speed) var(--ease),
     border-color var(--speed) var(--ease),

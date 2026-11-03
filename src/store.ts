@@ -7,7 +7,7 @@ import type {
 } from "./types";
 import { generateLesson } from "./generator";
 import { getPreset } from "./presets";
-import { loadLessons, saveLessons, type SavedLesson } from "./storage";
+import { loadCloudCache, loadLessons, saveCloudCache, saveLessons, type SavedLesson } from "./storage";
 import { normalizeLesson } from "./normalize";
 import { buildFallbackArtifacts } from "./fallbackArtifacts";
 import * as api from "./api";
@@ -227,10 +227,16 @@ export const useStore = create<AppState>((set, get) => {
   const patchPipeline = (patch: Partial<PipelineState>) =>
     set((state) => ({ pipeline: { ...state.pipeline, ...patch } }));
 
+  const cloudCache = loadCloudCache();
+
   return {
     view: "home",
     solarFocus: SYSTEM_FOCUS,
-    lessons: seedLocalLessons(),
+    account: cloudCache?.account ?? null,
+    lessons:
+      cloudCache && cloudCache.lessons.length
+        ? cloudCache.lessons.map(normalizeSaved)
+        : seedLocalLessons(),
     activeId: null,
     lessonLoading: false,
 
@@ -254,7 +260,6 @@ export const useStore = create<AppState>((set, get) => {
       }
       return genDeviceCode();
     })(),
-    account: null,
     accountLoading: false,
 
     setView: (view) => set({ view }),
@@ -273,32 +278,40 @@ export const useStore = create<AppState>((set, get) => {
 
     initAccount: async () => {
       set({ accountLoading: true });
-      try {
-        const { account } = await api.getAccount(get().deviceCode);
-        if (account) {
-          set({ account, accountLoading: false });
-          const lessons = await fetchServerLessons(get().deviceCode);
-          set({ lessons });
-        } else {
-          set({
-            account: null,
-            accountLoading: false,
-            lessons: seedLocalLessons(),
-          });
-        }
-      } catch {
-        set({
-          account: null,
-          accountLoading: false,
-          lessons: seedLocalLessons(),
-        });
+      const deviceCode = get().deviceCode;
+      /* Gọi song song thay vì chờ tài khoản xong mới hỏi bài học (2 lượt nối
+         tiếp ~2.8s trên mạng thật). */
+      const [accountResult, lessonsResult] = await Promise.allSettled([
+        api.getAccount(deviceCode),
+        fetchServerLessons(deviceCode),
+      ]);
+
+      if (accountResult.status === "rejected") {
+        /* Lỗi mạng/server: giữ dữ liệu đang hiển thị thay vì xoá sạch. */
+        set({ accountLoading: false });
+        return;
       }
+
+      const account = accountResult.value.account;
+      if (account) {
+        const lessons =
+          lessonsResult.status === "fulfilled" ? lessonsResult.value : get().lessons;
+        set({ account, accountLoading: false, lessons });
+        saveCloudCache(account, lessons);
+        return;
+      }
+
+      set({ account: null, accountLoading: false, lessons: seedLocalLessons() });
+      saveCloudCache(null, []);
     },
 
     refreshLessons: async () => {
-      if (!get().account) return;
+      const account = get().account;
+      if (!account) return;
       try {
-        set({ lessons: await fetchServerLessons(get().deviceCode) });
+        const lessons = await fetchServerLessons(get().deviceCode);
+        set({ lessons });
+        saveCloudCache(account, lessons);
       } catch {
         // keep current list
       }
