@@ -435,6 +435,13 @@ if (!process.env.VERCEL && fs.existsSync(dist)) {
   });
 }
 
+app.use("/api", (req, res) => {
+  res.status(404).json({
+    error: "endpoint_not_found",
+    message: `Không có API nào cho ${req.method} ${req.originalUrl}`,
+  });
+});
+
 app.use((error, req, res, next) => {
   if (res.headersSent) return next(error);
   const status = Number(error.status) || 500;

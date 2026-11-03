@@ -4,7 +4,7 @@ const require = createRequire(import.meta.url);
 const app = require("../server/index.js");
 
 export default function handler(req, res) {
-  /* Vercel có thể strip prefix /api khi route vào catch-all, nên dựng lại đường dẫn gốc. */
+  /* Rewrite /api/(.*) -> /api giữ nguyên req.url gốc, dựng lại prefix nếu lỡ bị strip. */
   if (!req.url.startsWith("/api")) {
     req.url = "/api" + (req.url === "/" ? "" : req.url);
   }
