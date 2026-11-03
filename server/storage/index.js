@@ -17,6 +17,12 @@ function selectStorage() {
 }
 
 const storage = selectStorage();
+if (process.env.VERCEL && storage === local) {
+  throw new Error(
+    "[storage] Filesystem trên Vercel serverless là read-only nên không dùng được driver local. " +
+      "Cấu hình SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY rồi đặt STORAGE_DRIVER=supabase."
+  );
+}
 console.log(`[storage] using ${storage.driver}`);
 
 module.exports = storage;

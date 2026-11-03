@@ -424,9 +424,10 @@ app.post(
 );
 
 /* ------------------------------ Frontend ------------------------------ */
+/* Trên Vercel, dist/ được serve bởi CDN nên bỏ qua bước này. */
 
 const dist = path.join(__dirname, "..", "dist");
-if (fs.existsSync(dist)) {
+if (!process.env.VERCEL && fs.existsSync(dist)) {
   app.use(express.static(dist));
   app.get("*", (req, res, next) => {
     if (req.path.startsWith("/api/")) return next();
@@ -445,7 +446,12 @@ app.use((error, req, res, next) => {
   });
 });
 
-const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
-  console.log(`server listening on ${PORT} (${storage.driver})`);
-});
+module.exports = app;
+
+/* Chỉ tự mở port khi chạy trực tiếp (node index.js), không phải trên serverless. */
+if (require.main === module && !process.env.VERCEL) {
+  const PORT = process.env.PORT || 3001;
+  app.listen(PORT, () => {
+    console.log(`server listening on ${PORT} (${storage.driver})`);
+  });
+}
