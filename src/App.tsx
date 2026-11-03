@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import Sidebar from "./components/Sidebar";
 import CreateLesson from "./components/CreateLesson";
-import LessonViewer from "./components/LessonViewer";
 import Account from "./components/Account";
 import Library from "./components/Library";
 import { lazy, Suspense } from "react";
@@ -9,6 +8,8 @@ import StudyCorner from "./components/StudyCorner";
 import LandingHome from "./components/LandingHome";
 const GeometrySpace = lazy(() => import("./components/GeometrySpace"));
 const ChemistryLab = lazy(() => import("./components/ChemistryLab"));
+/* LessonViewer kéo theo react-markdown + micromark (~200KB) chỉ dùng khi mở bài. */
+const LessonViewer = lazy(() => import("./components/LessonViewer"));
 import PipelineOverlay from "./components/PipelineOverlay";
 import SolarDashboard from "./components/SolarDashboard";
 import TopStatus from "./components/TopStatus";
@@ -62,7 +63,11 @@ export default function App() {
           {view === "library" && <Library />}
           {view === "create" && <CreateLesson />}
           {view === "account" && <Account />}
-          {view === "lesson" && activeId && <LessonViewer />}
+          {view === "lesson" && activeId && (
+            <Suspense fallback={<div className="empty-state"><p>Đang tải bài học…</p></div>}>
+              <LessonViewer />
+            </Suspense>
+          )}
           {view === "lesson" && !activeId && <LandingHome />}
           {view === "study" && <StudyCorner />}
           {view === "geometry" && (

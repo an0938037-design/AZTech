@@ -380,11 +380,14 @@ function earth(w: number, h: number, seed: number): HTMLCanvasElement {
   biome(90, 33, 12, "#8f7f62", 0.5); // Tibet
 
   // Vết địa hình nhỏ để phá vỡ mảng màu phẳng
+  /* Đọc cả canvas một lần: 900 lần getImageData(1x1) buộc đồng bộ GPU->CPU
+     từng lượt và chặn main thread ngay lúc khởi động. */
+  const pixels = ctx.getImageData(0, 0, w, h).data;
   for (let i = 0; i < 900; i += 1) {
     const x = random() * w;
     const y = random() * h;
-    const blue = ctx.getImageData(x | 0, y | 0, 1, 1).data;
-    if (blue[2] > blue[0] + 8) continue;
+    const at = ((y | 0) * w + (x | 0)) * 4;
+    if (pixels[at + 2] > pixels[at] + 8) continue;
     const shade = random() > 0.5 ? "rgba(24, 52, 24, 0.35)" : "rgba(150, 142, 100, 0.25)";
     ctx.fillStyle = shade;
     ctx.beginPath();

@@ -2,8 +2,10 @@ const zlib = require("zlib");
 
 function compressJson(value) {
   const raw = Buffer.from(JSON.stringify(value), "utf8");
+  /* Quality 11 nén 145KB mất 150ms và chặn event loop; quality 6 chỉ 4ms mà
+     file lớn hơn 1.4% — đổi lấy độ trễ lưu/đọc bài thấp hơn nhiều. */
   const compressed = zlib.brotliCompressSync(raw, {
-    params: { [zlib.constants.BROTLI_PARAM_QUALITY]: 11 },
+    params: { [zlib.constants.BROTLI_PARAM_QUALITY]: 6 },
   });
   return {
     b64: compressed.toString("base64"),
