@@ -28,15 +28,15 @@
 }
 
 [data-theme="light"] {
-  --glass-shell: color-mix(in srgb, #ffffff 46%, transparent);
-  --glass-panel: color-mix(in srgb, #ffffff 55%, transparent);
-  --glass-soft: color-mix(in srgb, #ffffff 34%, transparent);
-  --glass-strong: color-mix(in srgb, #ffffff 68%, transparent);
-  --glass-border: color-mix(in srgb, var(--ink) 12%, transparent);
-  --glass-border-strong: color-mix(in srgb, var(--ink) 22%, transparent);
+  --glass-shell: color-mix(in srgb, #ffffff 76%, transparent);
+  --glass-panel: color-mix(in srgb, #ffffff 84%, transparent);
+  --glass-soft: color-mix(in srgb, #ffffff 66%, transparent);
+  --glass-strong: color-mix(in srgb, #ffffff 94%, transparent);
+  --glass-border: color-mix(in srgb, var(--ink) 16%, transparent);
+  --glass-border-strong: color-mix(in srgb, var(--ink) 30%, transparent);
   --glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.9);
-  --glass-shadow: 0 28px 70px -34px rgba(72, 58, 140, 0.4),
-    0 2px 10px rgba(72, 58, 140, 0.08);
+  --glass-shadow: 0 20px 48px -28px rgba(72, 58, 140, 0.35),
+    0 2px 8px rgba(72, 58, 140, 0.1);
 }
 
 /* --------------------------------------------------------------------------
