@@ -27,7 +27,7 @@ function makeCanvas(w: number, h: number): CanvasPair {
   const canvas = document.createElement("canvas");
   canvas.width = w;
   canvas.height = h;
-  const ctx = canvas.getContext("2d");
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
   if (!ctx) throw new Error("Canvas 2D không khả dụng");
   return { canvas, ctx };
 }
