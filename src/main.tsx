@@ -4,6 +4,7 @@ import './index.css'
 import './cosmic-glass.css'
 import './solar.css'
 import './arduino.css'
+import './chemistry.css'
 import App from './App.tsx'
 
 createRoot(document.getElementById('root')!).render(

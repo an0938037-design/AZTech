@@ -7,6 +7,7 @@ import {
   BookOpen,
   Clock,
   Flame,
+  FlameKindling,
   FlaskConical,
   Gauge,
   Plus,
@@ -23,8 +24,8 @@ import {
    dung dịch, tạo khí, kết tủa, ngọn lửa, hơi nước và ghi lại lịch sử.
    ========================================================================== */
 
-type ReagentKind = "acid" | "base" | "salt" | "metal" | "oxide" | "other" | "indicator";
-type ReagentState = "dd" | "solid" | "metal" | "indicator";
+type ReagentKind = "acid" | "base" | "salt" | "metal" | "oxide" | "other" | "fuel" | "indicator";
+type ReagentState = "dd" | "solid" | "metal" | "gas" | "indicator";
 
 interface Reagent {
   id: string;
@@ -64,6 +65,19 @@ const REAGENTS: Reagent[] = [
   { id: "h2o2", formula: "H₂O₂", name: "Hiđro peoxit", kind: "other", state: "dd", tint: 0xeff8fb, note: "Chất oxi hoá, dễ phân huỷ tạo khí oxi." },
 
   { id: "phenolphthalein", formula: "PP", name: "Phenolphthalein", kind: "indicator", state: "indicator", tint: 0xf5f0ff, note: "Chỉ thị không màu trong axit, hồng trong bazơ." },
+
+  { id: "hno3", formula: "HNO₃", name: "Axit nitric", kind: "acid", state: "dd", tint: 0xedf4fa, note: "Axit mạnh, oxi hoá mạnh." },
+  { id: "ch3cooh", formula: "CH₃COOH", name: "Axit axetic", kind: "acid", state: "dd", tint: 0xf2f5ef, note: "Axit yếu, thành phần chính của giấm ăn." },
+  { id: "ca_oh2", formula: "Ca(OH)₂", name: "Canxi hidroxit (vôi tôi)", kind: "base", state: "dd", tint: 0xf4f3ea, note: "Bazơ mạnh, dùng để nhận biết khí CO₂." },
+  { id: "nh4cl", formula: "NH₄Cl", name: "Ammoni clorua", kind: "salt", state: "solid", solid: 0xf2f4f7, note: "Muối của bazơ yếu và axit mạnh, thuỷ phân cho môi trường axit." },
+  { id: "ch3coona", formula: "CH₃COONa", name: "Natri axetat", kind: "salt", state: "solid", solid: 0xeef2ec, note: "Muối của axit yếu và bazơ mạnh, thuỷ phân cho môi trường bazơ." },
+  { id: "mg", formula: "Mg", name: "Magie", kind: "metal", state: "metal", solid: 0xc9ced6, note: "Kim loại nhẹ, cháy với ngọn lửa trắng chói." },
+  { id: "al", formula: "Al", name: "Nhôm", kind: "metal", state: "metal", solid: 0xb8c0c9, note: "Kim loại hoạt động, tan trong axit giải phóng H₂." },
+  { id: "ch4", formula: "CH₄", name: "Khí metan", kind: "fuel", state: "gas", note: "Khí tự nhiên, cháy toả nhiều nhiệt." },
+  { id: "c2h5oh", formula: "C₂H₅OH", name: "Cồn etylic", kind: "fuel", state: "dd", tint: 0xf1f5f6, note: "Chất lỏng dễ cháy, có trong cồn y tế." },
+  { id: "h2", formula: "H₂", name: "Khí hiđro", kind: "fuel", state: "gas", note: "Khí nhẹ nhất, cháy trong không khí tạo hơi nước." },
+  { id: "s", formula: "S", name: "Lưu huỳnh", kind: "fuel", state: "solid", solid: 0xe9d75c, note: "Chất rắn vàng, cháy tạo khí SO₂ mùi hắc." },
+  { id: "c", formula: "C", name: "Than cacbon", kind: "fuel", state: "solid", solid: 0x2b2c31, note: "Chất rắn đen, cháy trong oxi tạo CO₂." },
 ];
 
 const REAGENT_MAP = new Map(REAGENTS.map((reagent) => [reagent.id, reagent]));
@@ -76,10 +90,11 @@ const KIND_LABEL: Record<ReagentKind, string> = {
   metal: "KIM LOẠI",
   oxide: "OXIT & ĐÁ VÔI",
   other: "CHẤT OXI HOÁ",
+  fuel: "NHIÊN LIỆU · ĐỐT",
   indicator: "CHỈ THỊ",
 };
 
-const KIND_ORDER: ReagentKind[] = ["acid", "base", "salt", "metal", "oxide", "other", "indicator"];
+const KIND_ORDER: ReagentKind[] = ["acid", "base", "salt", "metal", "oxide", "fuel", "other", "indicator"];
 
 const KIND_SHORT: Record<ReagentKind, string> = {
   acid: "AXIT",
@@ -88,6 +103,7 @@ const KIND_SHORT: Record<ReagentKind, string> = {
   metal: "KIM LOẠI",
   oxide: "OXIT",
   other: "OXI HOÁ",
+  fuel: "CHÁY",
   indicator: "CHỈ THỊ",
 };
 
@@ -95,6 +111,7 @@ const STATE_LABEL: Record<ReagentState, string> = {
   dd: "dd",
   solid: "rắn",
   metal: "kim loại",
+  gas: "khí",
   indicator: "chỉ thị",
 };
 
@@ -104,6 +121,8 @@ interface Preset {
   formula: string;
   reagents: string[];
   note: string;
+  heat?: boolean;
+  burn?: boolean;
 }
 
 const PRESETS: Preset[] = [
@@ -135,6 +154,36 @@ const PRESETS: Preset[] = [
     reagents: ["caco3", "hcl"],
     note: "Đá vôi tan, sủi bọt khí CO₂.",
   },
+  {
+    id: "magnesium",
+    label: "Magie + axit",
+    formula: "Mg + HCl",
+    reagents: ["mg", "hcl"],
+    note: "Magie tan rất nhanh, khí H₂ thoát mạnh.",
+  },
+  {
+    id: "weak_acid",
+    label: "Axit yếu + bazơ",
+    formula: "CH₃COOH + NaOH",
+    reagents: ["ch3cooh", "naoh"],
+    note: "Trung hoà axit yếu, tạo muối natri axetat.",
+  },
+  {
+    id: "methane",
+    label: "Đốt metan",
+    formula: "CH₄ + O₂",
+    reagents: ["ch4"],
+    note: "Metan cháy với ngọn lửa xanh, toả nhiệt mạnh.",
+    burn: true,
+  },
+  {
+    id: "ethanol",
+    label: "Đốt cồn",
+    formula: "C₂H₅OH + O₂",
+    reagents: ["c2h5oh"],
+    note: "Cồn cháy cho ngọn lửa xanh nhạt và hơi nước.",
+    burn: true,
+  },
 ];
 
 function normalizeText(value: string): string {
@@ -155,16 +204,23 @@ interface PhReading {
 
 function estimatePh(contents: string[]): PhReading {
   const has = (id: string) => contents.includes(id);
-  const acid = has("hcl") || has("h2so4");
-  const base = has("naoh") || has("koh") || has("ca_oh2");
+  const acid =
+    has("hcl") || has("h2so4") || has("hno3") || has("ch3cooh") || has("nh4cl");
+  const base = has("naoh") || has("koh") || has("ca_oh2") || has("ch3coona");
 
   let value = 7;
-  if (acid && !base) value = has("h2so4") ? 1.2 : 1.6;
-  else if (base && !acid) value = has("ca_oh2") ? 12.4 : 12.8;
+  if (has("h2so4") && !base) value = 1.2;
+  else if (has("hno3") && !base) value = 1.3;
+  else if (has("hcl") && !base) value = 1.6;
+  else if (has("ch3cooh") && !base) value = 2.9;
+  else if (base && !acid) value = has("ca_oh2") ? 12.4 : has("ch3coona") ? 8.9 : 12.8;
   else if (has("fecl3")) value = 2.4;
+  else if (has("alcl3")) value = 3.2;
   else if (has("cucl2")) value = 4.6;
-  else if (has("fecl2")) value = 5.0;
+  else if (has("nh4cl")) value = 5.0;
+  else if (has("fecl2")) value = 4.9;
   else if (has("zncl2")) value = 5.2;
+  else if (has("mgcl2")) value = 6.5;
   else if (has("cuso4")) value = 4.3;
   else if (has("na2co3")) value = 11.4;
   else if (has("cao")) value = 12.6;
@@ -224,6 +280,12 @@ Object.assign(SPECIES, {
   co2: { formula: "CO₂", name: "Cacbon đioxit", stay: false, gas: true, color: 0xeaf4f8 },
   h2: { formula: "H₂", name: "Hiđro", stay: false, gas: true, color: 0xeaf4f8 },
   o2: { formula: "O₂", name: "Oxi", stay: false, gas: true, color: 0xeaf4f8 },
+  so2: { formula: "SO₂", name: "Lưu huỳnh đioxit", stay: false, gas: true, color: 0xf4efc9 },
+  nh3: { formula: "NH₃", name: "Ammoniac", stay: false, gas: true, color: 0xeaf4f0 },
+  mgo: { formula: "MgO", name: "Magie oxit", solid: true, color: 0xf4f5f7 },
+  al2o3: { formula: "Al₂O₃", name: "Nhôm oxit", solid: true, color: 0xeef0f2 },
+  mgcl2: { formula: "MgCl₂", name: "Magie clorua", color: 0xe6f1f7 },
+  alcl3: { formula: "AlCl₃", name: "Nhôm clorua", color: 0xe6f1f7 },
 });
 
 function speciesOf(id: string): Species {
@@ -262,6 +324,7 @@ interface Reaction {
   phenomenon: string;
   condition?: string;
   heat?: boolean;
+  burn?: boolean;
   catalyst?: string[];
   effect: Effect;
   tags: string[];
@@ -678,6 +741,135 @@ const REACTIONS: Reaction[] = [
     effect: { liquid: 0xedf3f3, cloudy: 0.55, heat: 0.4 },
     tags: ["BAZƠ + AXIT", "KẾT TỦA"],
   },
+  {
+    id: "mg_hcl",
+    name: "Magie tác dụng với axit clohidric",
+    reactants: ["mg", "hcl"],
+    products: ["mgcl2", "h2"],
+    equation: "Mg + 2HCl → MgCl₂ + H₂↑",
+    phenomenon: "Mẩu magie tan rất nhanh, sủi bọt khí mạnh và cốc nóng lên rõ rệt.",
+    condition: "Nhiệt độ phòng",
+    effect: { liquid: 0xe7f3fa, gas: 1, gasColor: 0xf2fbff, heat: 0.6 },
+    tags: ["KIM LOẠI + AXIT", "KHÍ H₂", "TOẢ NHIỆT"],
+  },
+  {
+    id: "al_hcl",
+    name: "Nhôm tác dụng với axit clohidric",
+    reactants: ["al", "hcl"],
+    products: ["alcl3", "h2"],
+    equation: "2Al + 6HCl → 2AlCl₃ + 3H₂↑",
+    phenomenon: "Lá nhôm tan dần trong axit, bọt khí bám trên bề mặt kim loại rồi thoát lên.",
+    condition: "Nhiệt độ phòng",
+    effect: { liquid: 0xe8f3fa, gas: 0.85, gasColor: 0xf2fbff, heat: 0.45 },
+    tags: ["KIM LOẠI + AXIT", "KHÍ H₂"],
+  },
+  {
+    id: "ch3cooh_naoh",
+    name: "Trung hoà axit axetic bằng natri hidroxit",
+    reactants: ["ch3cooh", "naoh"],
+    products: ["ch3coona", "h2o"],
+    equation: "CH₃COOH + NaOH → CH₃COONa + H₂O",
+    phenomenon: "Axit yếu được trung hoà, dung dịch trong suốt và ấm lên. Sản phẩm là muối natri axetat.",
+    condition: "Nhiệt độ phòng",
+    effect: { liquid: 0xe9f2ef, heat: 0.25 },
+    tags: ["AXIT YẾU", "TRUNG HOÀ"],
+  },
+  {
+    id: "nh4cl_naoh",
+    name: "Ammoni clorua tác dụng với natri hidroxit",
+    reactants: ["nh4cl", "naoh"],
+    products: ["nh3", "nacl", "h2o"],
+    equation: "NH₄Cl + NaOH —t°→ NaCl + NH₃↑ + H₂O",
+    phenomenon: "Khí ammoniac có mùi khai thoát ra khi đun nóng; mẩu giấy quỳ tím ẩm hoá xanh.",
+    condition: "Đun nóng nhẹ",
+    heat: true,
+    effect: { liquid: 0xeaf3ef, gas: 0.85, gasColor: 0xeef8f3, heat: 0.5 },
+    tags: ["MUỐI AMONI", "KHÍ NH₃"],
+  },
+  {
+    id: "ch4_burn",
+    name: "Đốt cháy metan",
+    reactants: ["ch4"],
+    products: ["co2", "h2o"],
+    equation: "CH₄ + 2O₂ —t°→ CO₂↑ + 2H₂O",
+    phenomenon: "Ngọn lửa xanh lam bùng lên trên miệng cốc, toả nhiều nhiệt và tạo hơi nước.",
+    condition: "Có oxi · đánh lửa",
+    burn: true,
+    effect: { flame: 1, heat: 1, gas: 0.5, gasColor: 0xeaf4f8, smoke: 0.25 },
+    tags: ["PHẢN ỨNG CHÁY", "TOẢ NHIỆT"],
+  },
+  {
+    id: "c2h5oh_burn",
+    name: "Đốt cháy cồn etylic",
+    reactants: ["c2h5oh"],
+    products: ["co2", "h2o"],
+    equation: "C₂H₅OH + 3O₂ —t°→ 2CO₂↑ + 3H₂O",
+    phenomenon: "Cồn cháy với ngọn lửa xanh nhạt gần như trong suốt, hơi nước bốc lên.",
+    condition: "Có oxi · đánh lửa",
+    burn: true,
+    effect: { flame: 1, heat: 0.9, gas: 0.4, gasColor: 0xeaf4f8, smoke: 0.2 },
+    tags: ["PHẢN ỨNG CHÁY", "HƠI NƯỚC"],
+  },
+  {
+    id: "h2_burn",
+    name: "Đốt cháy hiđro",
+    reactants: ["h2"],
+    products: ["h2o"],
+    equation: "2H₂ + O₂ —t°→ 2H₂O",
+    phenomenon: "Ngọn lửa xanh rất nhạt, gần như vô hình; chỉ thấy hơi nước đọng lại.",
+    condition: "Có oxi · đánh lửa",
+    burn: true,
+    effect: { flame: 1, heat: 0.85, smoke: 0.35 },
+    tags: ["PHẢN ỨNG CHÁY", "HƠI NƯỚC"],
+  },
+  {
+    id: "s_burn",
+    name: "Đốt cháy lưu huỳnh",
+    reactants: ["s"],
+    products: ["so2"],
+    equation: "S + O₂ —t°→ SO₂↑",
+    phenomenon: "Lưu huỳnh cháy với ngọn lửa xanh tím, khí SO₂ có mùi hắc thoát ra.",
+    condition: "Có oxi · đánh lửa",
+    burn: true,
+    effect: { flame: 1, heat: 0.6, gas: 1, gasColor: 0xf0e6b8, smoke: 0.55 },
+    tags: ["PHẢN ỨNG CHÁY", "KHÍ SO₂"],
+  },
+  {
+    id: "c_burn",
+    name: "Đốt cháy cacbon",
+    reactants: ["c"],
+    products: ["co2"],
+    equation: "C + O₂ —t°→ CO₂↑",
+    phenomenon: "Than đỏ rực rồi cháy hết, khí CO₂ không màu thoát ra cùng ít khói.",
+    condition: "Có oxi · đánh lửa",
+    burn: true,
+    effect: { flame: 1, heat: 0.7, gas: 0.8, gasColor: 0xeaf4f8, smoke: 0.4 },
+    tags: ["PHẢN ỨNG CHÁY", "KHÍ CO₂"],
+  },
+  {
+    id: "mg_burn",
+    name: "Đốt cháy magie",
+    reactants: ["mg"],
+    products: ["mgo"],
+    equation: "2Mg + O₂ —t°→ 2MgO",
+    phenomenon: "Magie cháy với ánh sáng trắng chói, để lại bột trắng magie oxit.",
+    condition: "Có oxi · đánh lửa",
+    burn: true,
+    effect: { flame: 1, heat: 1, precip: 0xf4f5f7, precipAmount: 0.5, smoke: 0.7 },
+    tags: ["PHẢN ỨNG CHÁY", "ÁNH SÁNG MẠNH"],
+  },
+  {
+    id: "al_burn",
+    name: "Đốt cháy nhôm",
+    reactants: ["al"],
+    products: ["al2o3"],
+    equation: "4Al + 3O₂ —t°→ 2Al₂O₃",
+    phenomenon: "Nhôm cháy với ngọn lửa trắng, tạo lớp bột oxit nhôm rất mịn.",
+    condition: "Có oxi · đánh lửa",
+    burn: true,
+    effect: { flame: 1, heat: 0.95, precip: 0xeef0f2, precipAmount: 0.45, smoke: 0.5 },
+    tags: ["PHẢN ỨNG CHÁY", "OXIT NHÔM"],
+  },
 ];
 
 interface ResultProduct {
@@ -713,7 +905,12 @@ interface NotebookItem {
   name: string;
 }
 
-function findReaction(contents: string[], heating: boolean, done: string[]): Reaction | undefined {
+function findReaction(
+  contents: string[],
+  heating: boolean,
+  burning: boolean,
+  done: string[]
+): Reaction | undefined {
   const present = new Set(contents);
   present.add("h2o");
 
@@ -721,6 +918,7 @@ function findReaction(contents: string[], heating: boolean, done: string[]): Rea
   for (const reaction of REACTIONS) {
     if (done.includes(reaction.id)) continue;
     if (reaction.heat && !heating) continue;
+    if (reaction.burn && !burning) continue;
     if (!reaction.reactants.every((id) => present.has(id))) continue;
     if (!best || reaction.reactants.length > best.reactants.length) best = reaction;
   }
@@ -739,13 +937,13 @@ function applyReaction(contents: string[], reaction: Reaction): string[] {
   return next;
 }
 
-function resolveChain(contents: string[], done: string[], heating: boolean) {
+function resolveChain(contents: string[], done: string[], heating: boolean, burning: boolean) {
   let current = [...contents];
   let nextDone = [...done];
   const results: Reaction[] = [];
 
   for (let step = 0; step < 5; step += 1) {
-    const reaction = findReaction(current, heating, nextDone);
+    const reaction = findReaction(current, heating, burning, nextDone);
     if (!reaction) break;
     current = applyReaction(current, reaction);
     nextDone = [...nextDone, reaction.id];
@@ -887,6 +1085,7 @@ interface VisualState {
   heatPulse: number;
   temp: number;
   heating: boolean;
+  burning: boolean;
   pour: number;
   pourColor: THREE.Color;
 }
@@ -962,6 +1161,7 @@ export default function ReactionLab() {
   const [contents, setContents] = useState<string[]>([]);
   const [done, setDone] = useState<string[]>([]);
   const [heating, setHeating] = useState(false);
+  const [burning, setBurning] = useState(false);
   const [result, setResult] = useState<ResultView | null>(null);
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [notebook, setNotebook] = useState<NotebookItem[]>([]);
@@ -1012,6 +1212,7 @@ export default function ReactionLab() {
     heatPulse: 0,
     temp: 25,
     heating: false,
+    burning: false,
     pour: 0,
     pourColor: new THREE.Color(0xdceff5),
   });
@@ -1060,6 +1261,11 @@ export default function ReactionLab() {
   useEffect(() => {
     vis.current.heating = heating;
   }, [heating]);
+
+  useEffect(() => {
+    vis.current.burning = burning;
+    if (burning) vis.current.flame = Math.max(vis.current.flame, 1);
+  }, [burning]);
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -1146,10 +1352,12 @@ export default function ReactionLab() {
     setDone([]);
     setResult(null);
     setHeating(false);
+    setBurning(false);
     setPulse(0);
 
     const state = vis.current;
     state.heating = false;
+    state.burning = false;
     state.fillTarget = 0.82;
     state.cloudyTarget = 0.08;
     state.liquidTarget.set(WATER_COLOR);
@@ -1164,8 +1372,21 @@ export default function ReactionLab() {
     setTemperature(25);
   };
 
-  const pourReagents = (ids: string[], fresh = false) => {
-    if (fresh) clearBeakerState();
+  const pourReagents = (
+    ids: string[],
+    fresh = false,
+    options?: { heating?: boolean; burning?: boolean }
+  ) => {
+    const heatOn = options?.heating ?? (fresh ? false : heating);
+    const burnOn = options?.burning ?? (fresh ? false : burning);
+
+    if (fresh) {
+      clearBeakerState();
+      setHeating(heatOn);
+      setBurning(burnOn);
+      vis.current.heating = heatOn;
+      vis.current.burning = burnOn;
+    }
 
     let current = fresh ? [] : [...contents];
     let currentDone = fresh ? [] : [...done];
@@ -1178,7 +1399,10 @@ export default function ReactionLab() {
       if (!reagent || current.includes(id)) continue;
       lastReagent = reagent;
 
-      if (reagent.state === "dd" || reagent.state === "indicator") {
+      if (reagent.state === "gas") {
+        state.gas = Math.max(state.gas, 0.55);
+        state.gasColor.set(reagent.solid ?? 0xeaf4f8);
+      } else if (reagent.state === "dd" || reagent.state === "indicator") {
         state.fillTarget = clamp(state.fillTarget + 0.055, 0.82, 1.9);
         if (reagent.tint !== undefined) state.liquidTarget.lerp(new THREE.Color(reagent.tint), 0.42);
       } else {
@@ -1189,7 +1413,7 @@ export default function ReactionLab() {
       state.pour = 1;
       state.pourColor.set(reagent.tint ?? reagent.solid ?? 0xe8f0f5);
 
-      const next = resolveChain([...current, id], currentDone, fresh ? false : heating);
+      const next = resolveChain([...current, id], currentDone, heatOn, burnOn);
       current = next.contents;
       currentDone = next.done;
       results.push(...next.results);
@@ -1203,13 +1427,20 @@ export default function ReactionLab() {
     if (results.length > 0) {
       for (const reaction of results) applyVisualEffect(reaction.effect);
       const last = results[results.length - 1];
+      const burned = results.some((reaction) => reaction.burn);
+      if (burned) {
+        setBurning(false);
+        state.burning = false;
+      }
       setResult(reactionToResult(last, results.length, results));
       recordReactions(results);
       setPulse((value) => value + 1);
       notify(
-        results.length > 1
-          ? `${results.length} phản ứng liên tiếp đã xảy ra.`
-          : `${last.name} đã xảy ra.`
+        burned
+          ? `${last.name} · nhiên liệu cháy hết, ngọn lửa tắt.`
+          : results.length > 1
+            ? `${results.length} phản ứng liên tiếp đã xảy ra.`
+            : `${last.name} đã xảy ra.`
       );
       return;
     }
@@ -1227,7 +1458,7 @@ export default function ReactionLab() {
       return;
     }
 
-    setResult(observationResult(lastReagent, current, fresh ? false : heating));
+    setResult(observationResult(lastReagent, current, heatOn));
     notify(`${lastReagent.formula} đã được rót vào cốc.`);
   };
 
@@ -1240,7 +1471,10 @@ export default function ReactionLab() {
   };
 
   const runPreset = (preset: Preset) => {
-    pourReagents(preset.reagents, true);
+    pourReagents(preset.reagents, true, {
+      heating: Boolean(preset.heat),
+      burning: Boolean(preset.burn),
+    });
   };
 
   const toggleHeat = () => {
@@ -1254,7 +1488,7 @@ export default function ReactionLab() {
       return;
     }
 
-    const next = resolveChain(contents, done, true);
+    const next = resolveChain(contents, done, true, burning);
     setContents(next.contents);
     setDone(next.done);
 
@@ -1271,6 +1505,50 @@ export default function ReactionLab() {
       );
     } else {
       notify("Đang gia nhiệt cho cốc. Chưa có phản ứng nhiệt phân.");
+    }
+  };
+
+  const toggleBurn = () => {
+    if (burning) {
+      setBurning(false);
+      vis.current.burning = false;
+      notify("Đã tắt ngọn lửa.");
+      return;
+    }
+
+    const hasFuel = contents.some((id) => REAGENT_MAP.get(id)?.kind === "fuel");
+    if (!hasFuel) {
+      notify("Cần thêm nhiên liệu (CH₄, cồn, H₂, S, C…) trước khi đốt.");
+      return;
+    }
+
+    setBurning(true);
+    vis.current.burning = true;
+    vis.current.flame = 1;
+    applyVisualEffect({ heat: 0.45 });
+
+    const next = resolveChain(contents, done, heating, true);
+    setContents(next.contents);
+    setDone(next.done);
+
+    if (next.results.length > 0) {
+      for (const reaction of next.results) applyVisualEffect(reaction.effect);
+      const last = next.results[next.results.length - 1];
+      const burned = next.results.some((reaction) => reaction.burn);
+      if (burned) {
+        setBurning(false);
+        vis.current.burning = false;
+      }
+      setResult(reactionToResult(last, next.results.length, next.results));
+      recordReactions(next.results);
+      setPulse((value) => value + 1);
+      notify(
+        burned
+          ? `${last.name} · nhiên liệu cháy hết, ngọn lửa tắt.`
+          : `${last.name} đã xảy ra khi đốt.`
+      );
+    } else {
+      notify("Ngọn lửa đang cháy. Chưa có phản ứng cháy xảy ra.");
     }
   };
 
@@ -1772,13 +2050,14 @@ export default function ReactionLab() {
       const time = clock.elapsedTime;
       const state = vis.current;
 
-      const targetTemp = state.heating ? 100 : 25;
+      const targetTemp = state.heating ? 100 : state.burning ? 86 : 25;
       const heatRate = state.heating ? 0.55 : 0.34;
       state.temp += (targetTemp - state.temp) * (1 - Math.exp(-delta * heatRate));
       if (Math.abs(state.temp - targetTemp) < 0.15) state.temp = targetTemp;
 
       state.gas = Math.max(0, state.gas - delta * 0.16);
-      state.flame = Math.max(0, state.flame - delta * 0.55);
+      if (state.burning) state.flame = Math.min(1, state.flame + delta * 2.4);
+      else state.flame = Math.max(0, state.flame - delta * 0.55);
       state.smoke = Math.max(0, state.smoke - delta * 0.32);
       state.heatPulse = Math.max(0, state.heatPulse - delta * 0.4);
       state.pour = Math.max(0, state.pour - delta * 1.35);
@@ -2064,7 +2343,10 @@ export default function ReactionLab() {
     const solids = contents
       .filter((id) => {
         const reagent = REAGENT_MAP.get(id);
-        return Boolean(reagent && (reagent.state === "solid" || reagent.state === "metal"));
+        const species = speciesOf(id);
+        return Boolean(
+          (reagent && (reagent.state === "solid" || reagent.state === "metal")) || species.solid
+        );
       })
       .slice(0, 8);
 
@@ -2087,22 +2369,26 @@ export default function ReactionLab() {
   }, [contents]);
 
   const heatingStatus = heating ? "ĐANG GIA NHIỆT" : null;
-  const statusText = heatingStatus
-    ? heatingStatus
-    : result?.kind === "reaction"
-      ? "PHẢN ỨNG ĐÃ XẢY RA"
-      : result?.kind === "indicator"
-        ? "ĐỔI MÀU CHỈ THỊ"
-        : contents.length > 0
-          ? "ĐANG QUAN SÁT"
-          : "SẴN SÀNG";
-  const statusClass = heating
-    ? "is-heat"
-    : result?.kind === "reaction"
-      ? "is-live"
-      : result?.kind === "indicator"
-        ? "is-indicator"
-        : "";
+  const statusText = burning
+    ? "NGỌN LỬA ĐANG CHÁY"
+    : heatingStatus
+      ? heatingStatus
+      : result?.kind === "reaction"
+        ? "PHẢN ỨNG ĐÃ XẢY RA"
+        : result?.kind === "indicator"
+          ? "ĐỔI MÀU CHỈ THỊ"
+          : contents.length > 0
+            ? "ĐANG QUAN SÁT"
+            : "SẴN SÀNG";
+  const statusClass = burning
+    ? "is-burn"
+    : heating
+      ? "is-heat"
+      : result?.kind === "reaction"
+        ? "is-live"
+        : result?.kind === "indicator"
+          ? "is-indicator"
+          : "";
 
   const statusTag =
     result?.kind === "reaction"
@@ -2208,7 +2494,13 @@ export default function ReactionLab() {
                 >
                   <b>{preset.formula}</b>
                   <span>{preset.label}</span>
-                  <Plus size={10} />
+                  {preset.burn ? (
+                    <Flame size={10} className="rxn-preset-burn" />
+                  ) : preset.heat ? (
+                    <Thermometer size={10} />
+                  ) : (
+                    <Plus size={10} />
+                  )}
                 </button>
               ))}
             </div>
@@ -2300,6 +2592,15 @@ export default function ReactionLab() {
               {statusText}
             </div>
             <div className="rxn-tools">
+              <button
+                type="button"
+                className={`chem-tool rxn-burn ${burning ? "is-on" : ""}`}
+                onClick={toggleBurn}
+                aria-pressed={burning}
+              >
+                <FlameKindling size={13} />
+                {burning ? "ĐANG CHÁY" : "ĐỐT"}
+              </button>
               <button
                 type="button"
                 className={`chem-tool rxn-heat ${heating ? "is-on" : ""}`}
@@ -2406,12 +2707,14 @@ export default function ReactionLab() {
                 <strong>CHỌN CHẤT ĐỂ BẮT ĐẦU</strong>
                 <p>
                   Thêm axit, bazơ, muối hoặc kim loại vào cốc. Chất tạo thành ở lại trong cốc và có thể
-                  tiếp tục phản ứng; bấm ĐUN NÓNG để mở khoá phản ứng nhiệt phân.
+                  tiếp tục phản ứng; bấm ĐUN NÓNG để mở khoá phản ứng nhiệt phân, bấm ĐỐT để đốt cháy
+                  nhiên liệu.
                 </p>
                 <div className="rxn-idle-tips">
                   <span>01 · CHỌN CHẤT</span>
                   <span>02 · QUAN SÁT</span>
                   <span>03 · ĐUN NÓNG</span>
+                  <span>04 · ĐỐT CHÁY</span>
                 </div>
               </div>
             </div>
