@@ -894,9 +894,9 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   --line-soft: #e8e8e8;
   --ink: #0a0a0a;
   --ink-2: #1a1a1a;
-  --ink-3: #525252;
-  --ink-4: #737373;
-  --ink-5: #a3a3a3;
+  --ink-3: #454545;
+  --ink-4: #6b6b6b;
+  --ink-5: #8f8f8f;
 }
 
 * {

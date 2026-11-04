@@ -116,10 +116,10 @@ const applyPalette = (pal: (typeof PALETTES)[number], isDark: boolean) => {
       root.style.setProperty("--line-strong", "#9ea4d0");
       root.style.setProperty("--line-soft", "#dcdef4");
       root.style.setProperty("--ink", "#241f4d");
-      root.style.setProperty("--ink-2", "#3a3468");
-      root.style.setProperty("--ink-3", "#5b548c");
-      root.style.setProperty("--ink-4", "#7e78a8");
-      root.style.setProperty("--ink-5", "#a19cc4");
+      root.style.setProperty("--ink-2", "#332e5e");
+      root.style.setProperty("--ink-3", "#4a4378");
+      root.style.setProperty("--ink-4", "#5f5988");
+      root.style.setProperty("--ink-5", "#7d76a8");
       root.style.setProperty("--accent", "#6d4aff");
       root.style.setProperty("--accent-2", "#0891b2");
       return;
@@ -132,10 +132,10 @@ const applyPalette = (pal: (typeof PALETTES)[number], isDark: boolean) => {
     root.style.setProperty("--line-strong", shade(pal.bg, -80));
     root.style.setProperty("--line-soft", shade(pal.bg, -20));
     root.style.setProperty("--ink", pal.primary);
-    root.style.setProperty("--ink-2", mixHex(pal.primary, pal.bg, 0.07));
-    root.style.setProperty("--ink-3", mixHex(pal.primary, pal.bg, 0.12));
-    root.style.setProperty("--ink-4", mixHex(pal.primary, pal.bg, 0.3));
-    root.style.setProperty("--ink-5", mixHex(pal.primary, pal.bg, 0.45));
+    root.style.setProperty("--ink-2", mixHex(pal.primary, pal.bg, 0.05));
+    root.style.setProperty("--ink-3", mixHex(pal.primary, pal.bg, 0.08));
+    root.style.setProperty("--ink-4", mixHex(pal.primary, pal.bg, 0.2));
+    root.style.setProperty("--ink-5", mixHex(pal.primary, pal.bg, 0.3));
     root.style.setProperty("--accent", pal.accent);
     root.style.setProperty("--accent-2", pal.primary);
   }
