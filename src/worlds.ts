@@ -22,6 +22,8 @@ export interface SimWorld {
 
 export const BELT_INNER = BELT.inner;
 export const BELT_OUTER = BELT.outer;
+export const BELT_CENTER = BELT.center;
+export const BELT_SPAN = BELT.outer - BELT.inner;
 
 /* Ba thế giới nằm rải trong dải vành đai đã chừa sẵn giữa Sao Hoả và Sao Mộc. */
 const beltSpan = BELT.outer - BELT.inner;
@@ -40,7 +42,7 @@ export const SIM_WORLDS: SimWorld[] = [
     glow: "#6d4aff",
     surface: "crystal",
     orbit: beltAt(0.16),
-    size: 0.26,
+    size: 0.56,
     phase: 0.4,
     speed: 0.055,
   },
@@ -56,7 +58,7 @@ export const SIM_WORLDS: SimWorld[] = [
     glow: "#ff5c1a",
     surface: "ember",
     orbit: beltAt(0.5),
-    size: 0.3,
+    size: 0.62,
     phase: 2.4,
     speed: 0.047,
   },
@@ -72,7 +74,7 @@ export const SIM_WORLDS: SimWorld[] = [
     glow: "#0891b2",
     surface: "circuit",
     orbit: beltAt(0.84),
-    size: 0.24,
+    size: 0.54,
     phase: 4.3,
     speed: 0.041,
   },

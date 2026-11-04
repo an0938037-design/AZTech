@@ -22,7 +22,14 @@ import {
   sunTexture,
   type Detail,
 } from "../solarTextures";
-import { BELT_INNER, BELT_OUTER, SIM_WORLDS, type SimWorld } from "../worlds";
+import {
+  BELT_CENTER,
+  BELT_INNER,
+  BELT_OUTER,
+  BELT_SPAN,
+  SIM_WORLDS,
+  type SimWorld,
+} from "../worlds";
 
 export interface SolarHover {
   kind: "planet" | "chapter" | "station" | "sun" | "belt" | "world";
@@ -547,29 +554,71 @@ export default function SolarSystem({
 
     const rockGeometry = new THREE.IcosahedronGeometry(1, 0);
     const rockMaterial = new THREE.MeshStandardMaterial({
-      color: 0x93a0b8,
-      roughness: 0.95,
-      metalness: 0.06,
+      color: 0xffffff,
+      roughness: 0.82,
+      metalness: 0.14,
       flatShading: true,
+      emissive: 0x1b2436,
+      emissiveIntensity: 0.45,
     });
-    const rockCount = quality === "low" ? 240 : 560;
+    const rockCount = quality === "low" ? 420 : 900;
     const beltRocks = new THREE.InstancedMesh(rockGeometry, rockMaterial, rockCount);
     const rockPlace = new THREE.Object3D();
+    const rockTints = [
+      new THREE.Color("#c8d3e6"),
+      new THREE.Color("#9aa6bd"),
+      new THREE.Color("#d8b48f"),
+      new THREE.Color("#7f8ba4"),
+      new THREE.Color("#e6d9c2"),
+    ];
     for (let i = 0; i < rockCount; i += 1) {
-      const radius = BELT_INNER + Math.random() * (BELT_OUTER - BELT_INNER);
+      /* Gom đá về hai dải sáng để vành đai có kết cấu, không phải một đám mù. */
+      const band = Math.random() < 0.62 ? 0.34 : 0.72;
+      const radius = BELT_INNER + BELT_SPAN * (band + (Math.random() - 0.5) * 0.26);
       const angle = Math.random() * Math.PI * 2;
       rockPlace.position.set(
         Math.cos(angle) * radius,
-        (Math.random() - 0.5) * 0.42,
+        (Math.random() - 0.5) * 0.5,
         Math.sin(angle) * radius
       );
       rockPlace.rotation.set(Math.random() * 3, Math.random() * 3, Math.random() * 3);
-      rockPlace.scale.setScalar(0.014 + Math.random() * 0.05);
+      const chunk = Math.random();
+      rockPlace.scale.set(
+        0.022 + chunk * 0.075,
+        (0.02 + Math.random() * 0.06) * 0.8,
+        0.022 + Math.random() * 0.07
+      );
       rockPlace.updateMatrix();
       beltRocks.setMatrixAt(i, rockPlace.matrix);
+      beltRocks.setColorAt(i, rockTints[i % rockTints.length]);
     }
     beltRocks.instanceMatrix.needsUpdate = true;
+    if (beltRocks.instanceColor) beltRocks.instanceColor.needsUpdate = true;
     beltGroup.add(beltRocks);
+
+    /* Bụi sáng + hai mép phát quang: vành đai phải nổi bật giữa hệ. */
+    const dustBand = new THREE.Mesh(
+      new THREE.TorusGeometry(BELT_CENTER, BELT_SPAN / 2, 2, 128),
+      new THREE.MeshBasicMaterial({
+        color: 0x8fb6e8,
+        transparent: true,
+        opacity: 0.11,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+        side: THREE.DoubleSide,
+      })
+    );
+    dustBand.rotation.x = Math.PI / 2;
+    dustBand.scale.set(1, 1, 0.22);
+    beltGroup.add(dustBand);
+
+    for (const [edge, alpha] of [
+      [BELT_INNER, 0.3],
+      [BELT_OUTER, 0.22],
+    ] as const) {
+      const edgeLine = circleLine(edge, 0xbcd8ff, alpha);
+      beltGroup.add(edgeLine);
+    }
 
     const beltHit = new THREE.Mesh(
       new THREE.TorusGeometry(
@@ -617,7 +666,7 @@ export default function SolarSystem({
             emissiveIntensity: 0.6,
           })
         );
-        group.add(glowSprite(spec.glow, "#ffe6b8", spec.size * 9, 0.3));
+        group.add(glowSprite(spec.glow, "#ffe6b8", spec.size * 6, 0.34));
       } else {
         body = new THREE.Mesh(
           new THREE.BoxGeometry(spec.size * 1.7, spec.size * 1.15, spec.size * 1.7),

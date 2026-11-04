@@ -240,8 +240,8 @@ export function planetReach(planet: PlanetSpec): number {
 }
 
 const ORBIT_GAP = 0.6;
-const BELT_WIDTH = 1.7;
-const BELT_CLEARANCE = 0.5;
+const BELT_WIDTH = 5.6;
+const BELT_CLEARANCE = 0.55;
 
 (function layoutOrbits() {
   let cursor = 2.9;
@@ -258,14 +258,12 @@ const BELT_CLEARANCE = 0.5;
 })();
 
 const MARS_SPEC = PLANET_BY_ID.mars;
-const JUPITER_SPEC = PLANET_BY_ID.jupiter;
 
 export const BELT = {
   inner: MARS_SPEC.orbit + planetReach(MARS_SPEC) + BELT_CLEARANCE,
-  outer:
-    JUPITER_SPEC.orbit -
-    planetReach(JUPITER_SPEC) -
-    BELT_CLEARANCE,
+  get outer() {
+    return this.inner + BELT_WIDTH;
+  },
   get center() {
     return (this.inner + this.outer) / 2;
   },
