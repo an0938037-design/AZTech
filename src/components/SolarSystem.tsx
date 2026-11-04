@@ -20,12 +20,14 @@ import {
   sunTexture,
   type Detail,
 } from "../solarTextures";
+import { BELT_INNER, BELT_OUTER, SIM_WORLDS, type SimWorld } from "../worlds";
 
 export interface SolarHover {
-  kind: "planet" | "chapter" | "station" | "sun";
+  kind: "planet" | "chapter" | "station" | "sun" | "belt" | "world";
   planetId: PlanetId | null;
   chapterId: string | null;
   stationId: string | null;
+  worldId?: SimWorld["id"] | null;
   title: string;
   meta: string;
 }
@@ -40,6 +42,8 @@ interface Props {
   onHover: (hover: SolarHover | null) => void;
   onOpenStation: (chapter: SolarChapter, station: SolarStation) => void;
   onOpenSun: () => void;
+  onOpenBelt?: () => void;
+  onOpenWorld?: (worldId: SimWorld["id"]) => void;
   onReady: () => void;
   onFallback: () => void;
 }
@@ -373,13 +377,15 @@ export default function SolarSystem({
   onHover,
   onOpenStation,
   onOpenSun,
+  onOpenBelt,
+  onOpenWorld,
   onReady,
   onFallback,
 }: Props) {
   const hostRef = useRef<HTMLDivElement>(null);
   const labelsRef = useRef<HTMLDivElement>(null);
   const bundleRef = useRef<Bundle | null>(null);
-  const propsRef = useRef({ model, focus, ambient, inset, insetY, onFocus, onHover, onOpenStation, onOpenSun, onReady, onFallback });
+  const propsRef = useRef({ model, focus, ambient, inset, insetY, onFocus, onHover, onOpenStation, onOpenSun, onOpenBelt, onOpenWorld, onReady, onFallback });
   const elapsedRef = useRef(0);
   const frozenPlanetRef = useRef(0);
   const frozenChapterRef = useRef(0);
@@ -395,7 +401,7 @@ export default function SolarSystem({
   });
 
   useEffect(() => {
-    propsRef.current = { model, focus, ambient, inset, insetY, onFocus, onHover, onOpenStation, onOpenSun, onReady, onFallback };
+    propsRef.current = { model, focus, ambient, inset, insetY, onFocus, onHover, onOpenStation, onOpenSun, onOpenBelt, onOpenWorld, onReady, onFallback };
   });
 
   /* ------------------------------ dựng scene ------------------------------ */
@@ -527,6 +533,111 @@ export default function SolarSystem({
       sprite.position.set(x, y, -180);
       scene.add(sprite);
       nebulae.push(sprite);
+    }
+
+    /* Vành đai tiểu hành tinh = khu kiểm tra đánh giá; ba thế giới mô phỏng
+       giả tưởng nằm trong vành đai, mỗi thế giới một vật liệu riêng. */
+    const beltGroup = new THREE.Group();
+    beltGroup.rotation.x = 0.05;
+    scene.add(beltGroup);
+
+    const rockGeometry = new THREE.IcosahedronGeometry(1, 0);
+    const rockMaterial = new THREE.MeshStandardMaterial({
+      color: 0x93a0b8,
+      roughness: 0.95,
+      metalness: 0.06,
+      flatShading: true,
+    });
+    const rockCount = quality === "low" ? 240 : 560;
+    const beltRocks = new THREE.InstancedMesh(rockGeometry, rockMaterial, rockCount);
+    const rockPlace = new THREE.Object3D();
+    for (let i = 0; i < rockCount; i += 1) {
+      const radius = BELT_INNER + Math.random() * (BELT_OUTER - BELT_INNER);
+      const angle = Math.random() * Math.PI * 2;
+      rockPlace.position.set(
+        Math.cos(angle) * radius,
+        (Math.random() - 0.5) * 0.42,
+        Math.sin(angle) * radius
+      );
+      rockPlace.rotation.set(Math.random() * 3, Math.random() * 3, Math.random() * 3);
+      rockPlace.scale.setScalar(0.014 + Math.random() * 0.05);
+      rockPlace.updateMatrix();
+      beltRocks.setMatrixAt(i, rockPlace.matrix);
+    }
+    beltRocks.instanceMatrix.needsUpdate = true;
+    beltGroup.add(beltRocks);
+
+    const beltHit = new THREE.Mesh(
+      new THREE.TorusGeometry(
+        (BELT_INNER + BELT_OUTER) / 2,
+        (BELT_OUTER - BELT_INNER) / 2 + 0.2,
+        6,
+        72
+      ),
+      new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false })
+    );
+    beltHit.rotation.x = Math.PI / 2;
+    beltHit.userData = { kind: "belt" };
+    beltGroup.add(beltHit);
+
+    interface WorldEntry {
+      spec: SimWorld;
+      group: THREE.Group;
+      hit: THREE.Mesh;
+      spin: number;
+    }
+    const worlds: WorldEntry[] = [];
+    for (const spec of SIM_WORLDS) {
+      const group = new THREE.Group();
+      let body: THREE.Mesh;
+      if (spec.surface === "crystal") {
+        body = new THREE.Mesh(
+          new THREE.OctahedronGeometry(spec.size * 1.3, 0),
+          new THREE.MeshStandardMaterial({
+            color: spec.color,
+            flatShading: true,
+            roughness: 0.22,
+            metalness: 0.45,
+            emissive: spec.glow,
+            emissiveIntensity: 0.3,
+          })
+        );
+      } else if (spec.surface === "ember") {
+        body = new THREE.Mesh(
+          new THREE.SphereGeometry(spec.size, 24, 16),
+          new THREE.MeshStandardMaterial({
+            color: spec.color,
+            roughness: 0.65,
+            metalness: 0.1,
+            emissive: spec.glow,
+            emissiveIntensity: 0.6,
+          })
+        );
+        group.add(glowSprite(spec.glow, "#ffe6b8", spec.size * 9, 0.3));
+      } else {
+        body = new THREE.Mesh(
+          new THREE.BoxGeometry(spec.size * 1.7, spec.size * 1.15, spec.size * 1.7),
+          new THREE.MeshStandardMaterial({
+            color: 0x11313a,
+            roughness: 0.45,
+            metalness: 0.6,
+            emissive: spec.glow,
+            emissiveIntensity: 0.22,
+          })
+        );
+        const ring = circleLine(spec.size * 2.6, new THREE.Color(spec.color).getHex(), 0.45);
+        ring.rotation.x = Math.PI / 2;
+        group.add(ring);
+      }
+      group.add(body);
+      const hit = new THREE.Mesh(
+        new THREE.SphereGeometry(Math.max(spec.size * 1.9, 0.26), 10, 8),
+        new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false })
+      );
+      hit.userData = { kind: "world", worldId: spec.id, title: spec.name };
+      group.add(hit);
+      scene.add(group);
+      worlds.push({ spec, group, hit, spin: 0.3 + (spec.phase % 1) * 0.4 });
     }
 
     const labelsHost = labels;
@@ -797,6 +908,10 @@ export default function SolarSystem({
       pickables.length = 0;
       if (sunMesh.visible) pickables.push(sunMesh);
       const f = focusRef.current;
+      if (f.level === "system") {
+        pickables.push(beltHit);
+        for (const world of worlds) pickables.push(world.hit);
+      }
       for (const entry of planets) {
         if (f.level === "system") {
           pickables.push(entry.mesh);
@@ -1198,6 +1313,28 @@ export default function SolarSystem({
             meta: "Trợ lý học tập trung tâm",
           };
         }
+        if (data.kind === "belt") {
+          return {
+            kind: "belt",
+            planetId: null,
+            chapterId: null,
+            stationId: null,
+            title: "Vành đai đánh giá",
+            meta: "Kiểm tra · luyện đề · sửa bài",
+          };
+        }
+        if (data.kind === "world") {
+          const world = worlds.find((item) => item.hit === hit.object);
+          return {
+            kind: "world",
+            planetId: null,
+            chapterId: null,
+            stationId: null,
+            worldId: world?.spec.id ?? null,
+            title: world?.spec.name ?? "Thế giới mô phỏng",
+            meta: world?.spec.designation ?? "Phòng mô phỏng giả tưởng",
+          };
+        }
         if (data.kind === "planet") {
           const entry = planets.find((item) => item.spec.id === data.planetId);
           const planetData = propsRef.current.model.planets.find((item) => item.spec.id === data.planetId);
@@ -1287,7 +1424,11 @@ export default function SolarSystem({
         updateHover();
         return;
       }
-      if (hover.kind === "sun") {
+      if (hover.kind === "belt") {
+        propsRef.current.onOpenBelt?.();
+      } else if (hover.kind === "world" && hover.worldId) {
+        propsRef.current.onOpenWorld?.(hover.worldId);
+      } else if (hover.kind === "sun") {
         propsRef.current.onOpenSun();
       } else if (hover.kind === "planet" && hover.planetId) {
         propsRef.current.onFocus({ level: "planet", planetId: hover.planetId, chapterId: null });
@@ -1512,6 +1653,17 @@ export default function SolarSystem({
 
       sunMesh.rotation.y += delta * 0.02;
       glowInner.material.rotation += delta * 0.01;
+
+      beltGroup.rotation.y += delta * 0.012;
+      for (const world of worlds) {
+        const angle = world.spec.phase + orbitClock * world.spec.speed;
+        world.group.position.set(
+          Math.cos(angle) * world.spec.orbit,
+          Math.sin(angle * 2.4 + world.spec.phase) * 0.16,
+          Math.sin(angle) * world.spec.orbit
+        );
+        world.group.rotation.y += delta * world.spin;
+      }
 
       if (flight) {
         flight.t = Math.min(1, flight.t + delta / flight.duration);

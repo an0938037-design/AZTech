@@ -16,6 +16,9 @@ const VIEW_LABEL: Record<View, string> = {
   geometry: "HÌNH HỌC 3D",
   lab: "PHÒNG LAB 3D",
   arduino: "ARDUINO",
+  sim: "MÔ PHỎNG",
+  assess: "KIỂM TRA ĐÁNH GIÁ",
+  settings: "CÀI ĐẶT",
   library: "THƯ VIỆN",
 };
 
@@ -56,9 +59,9 @@ export default function TopStatus({ onMenu }: Props) {
         <button
           type="button"
           className={`top-pill ${account ? "is-cloud" : ""}`}
-          onClick={() => setView("account")}
-          aria-label={account ? "Mở tài khoản cloud" : "Thiết lập tài khoản cloud"}
-          title="Quản lý tài khoản"
+          onClick={() => setView("settings")}
+          aria-label={account ? "Mở cài đặt tài khoản" : "Thiết lập tài khoản trong cài đặt"}
+          title="Cài đặt"
         >
           {account ? <Cloud size={11} /> : <WifiOff size={11} />}
           {account ? `CLOUD · ${account.code}` : "LOCAL"}
@@ -66,10 +69,10 @@ export default function TopStatus({ onMenu }: Props) {
         <button
           type="button"
           className="top-manage"
-          onClick={() => setView("account")}
-          aria-label="Quản lý tài khoản"
+          onClick={() => setView("settings")}
+          aria-label="Mở cài đặt"
         >
-          QUẢN LÝ
+          CÁI ĐẶT
         </button>
         <span className="top-clock">
           <span className="top-live" aria-hidden="true" />

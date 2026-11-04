@@ -24,6 +24,7 @@ import {
   type SolarStation,
 } from "../solar";
 import SolarSystem, { type SolarHover } from "./SolarSystem";
+import { SIM_WORLDS, type SimWorld } from "../worlds";
 
 function levelLabel(level: SolarFocus["level"]): string {
   if (level === "planet") return "HÀNH TINH";
@@ -153,6 +154,16 @@ export default function SolarDashboard({ ambient = false }: { ambient?: boolean 
     setView("create");
   };
 
+  const assessCount = useMemo(
+    () => lessons.filter((lesson) => (lesson.quiz?.length ?? 0) > 0).length,
+    [lessons]
+  );
+
+  const openWorld = (id: SimWorld["id"]) => {
+    const world = SIM_WORLDS.find((item) => item.id === id);
+    if (world) setView(world.view);
+  };
+
   const askAi = () => {
     const text =
       aiText.trim() ||
@@ -212,6 +223,8 @@ export default function SolarDashboard({ ambient = false }: { ambient?: boolean 
           onHover={ambient ? noop : setHover}
           onOpenStation={ambient ? noop : openStation}
           onOpenSun={ambient ? noop : () => setAiOpen(true)}
+          onOpenBelt={ambient ? noop : () => setView("assess")}
+          onOpenWorld={ambient ? noop : openWorld}
           onReady={ambient ? noopReady : onReady}
           onFallback={ambient ? noopFallback : onFallback}
         />
@@ -471,6 +484,49 @@ export default function SolarDashboard({ ambient = false }: { ambient?: boolean 
                       </button>
                     );
                   })}
+
+                  <p className="solar-section-divider">VÀNH ĐAI TIỂU HÀNH TINH</p>
+                  <button
+                    type="button"
+                    className="solar-row solar-row-belt"
+                    onClick={() => setView("assess")}
+                    style={{ "--i": model.planets.length } as CSSProperties}
+                  >
+                    <span className="solar-order">◎</span>
+                    <span className="solar-row-main">
+                      <b>Kiểm tra đánh giá</b>
+                      <em>{assessCount} bài có ngân hàng câu hỏi</em>
+                    </span>
+                    <ChevronRight size={13} />
+                  </button>
+                  {SIM_WORLDS.map((world, index) => (
+                    <button
+                      key={world.id}
+                      type="button"
+                      className="solar-row solar-row-world"
+                      onClick={() => setView(world.view)}
+                      style={
+                        {
+                          "--i": model.planets.length + 1 + index,
+                          "--planet-accent": world.color,
+                        } as CSSProperties
+                      }
+                    >
+                      <span
+                        className="solar-dot"
+                        aria-hidden="true"
+                        style={{
+                          background: world.color,
+                          boxShadow: `0 0 10px -2px ${world.color}`,
+                        }}
+                      />
+                      <span className="solar-row-main">
+                        <b>{world.name}</b>
+                        <em>{world.designation}</em>
+                      </span>
+                      <ChevronRight size={13} />
+                    </button>
+                  ))}
                 </div>
                 <div className="solar-panel-foot">
                   <span>{percent(model.progress)} hoàn thành</span>
@@ -610,6 +666,8 @@ export default function SolarDashboard({ ambient = false }: { ambient?: boolean 
               {liveHover.kind === "chapter" && "CHƯƠNG HỌC"}
               {liveHover.kind === "station" && "TRẠM HỌC"}
               {liveHover.kind === "sun" && "TRÍ TUỆ TRUNG TÂM"}
+              {liveHover.kind === "belt" && "VÀNH ĐAI"}
+              {liveHover.kind === "world" && "THẾ GIỚI MÔ PHỎNG"}
             </span>
             <b>{liveHover.title}</b>
             <em>{liveHover.meta}</em>
@@ -618,7 +676,11 @@ export default function SolarDashboard({ ambient = false }: { ambient?: boolean 
                 ? "NHẤN ĐỂ MỞ BÀI HỌC"
                 : liveHover.kind === "sun"
                   ? "NHẤN ĐỂ MỞ TRỢ LÝ AZ AI"
-                  : "NHẤN ĐỂ ĐI SÂU"}
+                  : liveHover.kind === "belt"
+                    ? "NHẤN ĐỂ VÀO KIỂM TRA ĐÁNH GIÁ"
+                    : liveHover.kind === "world"
+                      ? "NHẤN ĐỂ NHẬP THẾ GIỚI"
+                      : "NHẤN ĐỂ ĐI SÂU"}
             </span>
           </div>
         )}

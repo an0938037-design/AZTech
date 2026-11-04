@@ -23,7 +23,7 @@ import type { AiProvider } from "../types";
 type Message = { ok: boolean; text: string };
 type Busy = "save" | "test" | "models" | "activate" | "migrate" | null;
 
-export default function Account() {
+export default function Account({ onBack }: { onBack?: () => void }) {
   const account = useStore((s) => s.account);
   const accountLoading = useStore((s) => s.accountLoading);
   const deviceCode = useStore((s) => s.deviceCode);
@@ -257,8 +257,8 @@ export default function Account() {
           <button
             type="button"
             className="icon-btn"
-            onClick={() => setView("library")}
-            aria-label="Quay lại thư viện"
+            onClick={() => (onBack ? onBack() : setView("library"))}
+            aria-label={onBack ? "Quay lại cài đặt" : "Quay lại thư viện"}
           >
             <ArrowLeft size={17} />
           </button>

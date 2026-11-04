@@ -1,0 +1,661 @@
+/* ==========================================================================
+   LAYOUT V2 — điều hướng nhóm kiểu iOS, hub Mô phỏng, hub Đánh giá, Cài đặt.
+   Nạp sau solar.css nên các khối ở đây thắng cascade.
+   ========================================================================== */
+
+/* ----------------------------- Sidebar nhóm ------------------------------ */
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0 12px 6px;
+}
+
+.sidebar-group + .sidebar-group {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--glass-border);
+}
+
+.sidebar-group-label {
+  padding: 2px 10px 6px;
+  font-family: var(--mono);
+  font-size: 8px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-5);
+}
+
+.sidebar-nav-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 40px;
+  padding: 9px 11px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--ink-2);
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition:
+    background var(--speed) var(--ease),
+    color var(--speed) var(--ease),
+    transform var(--speed) var(--ease);
+}
+
+.sidebar-nav-item:hover {
+  background: color-mix(in srgb, var(--ink) 7%, transparent);
+  color: var(--ink);
+  transform: translateX(2px);
+}
+
+.sidebar-nav-item.is-active {
+  background: var(--ink);
+  color: var(--bg);
+  box-shadow:
+    0 14px 30px -16px rgba(0, 0, 0, 0.85),
+    inset 0 1px 0 color-mix(in srgb, #ffffff 45%, transparent);
+}
+
+.sidebar-nav-item.is-active svg {
+  color: var(--bg);
+}
+
+.sidebar-nav-arrow {
+  margin-left: auto;
+  opacity: 0;
+  transform: translateX(-4px);
+  transition: opacity 160ms ease, transform 160ms var(--ease);
+}
+
+.sidebar-nav-item:hover .sidebar-nav-arrow,
+.sidebar-nav-item.is-active .sidebar-nav-arrow {
+  opacity: 0.55;
+  transform: translateX(0);
+}
+
+/* ------------------------------ Cài đặt iOS ------------------------------- */
+
+.settings-page {
+  min-height: 100%;
+}
+
+.settings-host .account-page {
+  padding-bottom: 64px;
+}
+
+.settings-body {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 22px var(--gutter) 72px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.settings-group {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 4px;
+  border: 1px solid var(--glass-border);
+  border-radius: 20px;
+  background: var(--glass-soft);
+  backdrop-filter: blur(10px) saturate(150%);
+  -webkit-backdrop-filter: blur(10px) saturate(150%);
+  box-shadow: var(--glass-highlight);
+}
+
+.settings-group-title {
+  padding: 10px 14px 6px;
+  font-family: var(--mono);
+  font-size: 8.5px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+}
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 52px;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 15px;
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+  transition: background 160ms ease, transform 160ms var(--ease);
+}
+
+.settings-row + .settings-row {
+  box-shadow: inset 0 1px 0 var(--glass-border);
+  border-radius: 0 0 15px 15px;
+}
+
+.settings-row:hover {
+  background: color-mix(in srgb, var(--ink) 6%, transparent);
+}
+
+.settings-row:active {
+  transform: scale(0.99);
+}
+
+.settings-row.is-static {
+  cursor: default;
+}
+
+.settings-row-icon {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  flex: none;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--ink) 10%, transparent);
+  color: var(--ink-2);
+}
+
+.settings-row-icon.is-cloud {
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+  color: var(--ink);
+}
+
+.settings-row-icon.is-palette {
+  background: color-mix(in srgb, var(--accent-2, var(--accent)) 22%, transparent);
+}
+
+.settings-row-label {
+  flex: 1;
+  min-width: 0;
+  font-size: 13.5px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+.settings-row-value {
+  flex: none;
+  max-width: 46%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  color: var(--ink-4);
+}
+
+.settings-chevron {
+  flex: none;
+  color: var(--ink-5);
+}
+
+.settings-switch {
+  position: relative;
+  width: 52px;
+  height: 30px;
+  flex: none;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--ink) 16%, transparent);
+  cursor: pointer;
+  transition: background 220ms var(--ease);
+}
+
+.settings-switch.is-on {
+  background: var(--accent);
+}
+
+.settings-switch-knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.28);
+  transition: transform 240ms var(--ease);
+}
+
+.settings-switch.is-on .settings-switch-knob {
+  transform: translateX(22px);
+}
+
+.settings-sheet {
+  margin: 0 var(--gutter) 40px;
+  padding: 14px 16px 18px;
+  border: 1px solid var(--glass-border);
+  border-radius: 18px;
+  background: var(--glass-panel);
+  animation: sheet-in 240ms var(--ease) both;
+}
+
+@keyframes sheet-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.settings-sheet-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-bottom: 12px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--glass-border);
+}
+
+.settings-sheet-head strong {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.settings-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.device-code-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--glass-border);
+  border-radius: 14px;
+  background: var(--glass-soft);
+}
+
+.device-code-big {
+  font-family: var(--mono);
+  font-size: 24px;
+  letter-spacing: 0.14em;
+  color: var(--ink);
+}
+
+.data-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 0;
+  border-bottom: 1px dashed var(--glass-border);
+  font-size: 12.5px;
+}
+
+.data-row span { color: var(--ink-4); }
+.data-row strong { font-family: var(--mono); font-size: 12px; color: var(--ink-2); }
+
+.palette-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+  gap: 10px;
+}
+
+.palette-swatch {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 44px;
+  padding: 8px 10px;
+  border: 1px solid var(--glass-border);
+  border-radius: 13px;
+  background: var(--glass-soft);
+  color: var(--ink-2);
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: border-color 160ms ease, transform 160ms var(--ease), background 160ms ease;
+}
+
+.palette-swatch:hover {
+  border-color: var(--glass-border-strong);
+  transform: translateY(-2px);
+}
+
+.palette-swatch.is-active {
+  border-color: var(--accent);
+  background: var(--glass-panel);
+  color: var(--ink);
+}
+
+.palette-sweep {
+  width: 22px;
+  height: 22px;
+  flex: none;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ink) 18%, transparent);
+}
+
+.palette-swatch-name { flex: 1; min-width: 0; }
+.palette-swatch-check { color: var(--accent); }
+
+/* --------------------------- Hub mô phỏng -------------------------------- */
+
+.sim-page { min-height: 100%; }
+
+.sim-body {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 26px var(--gutter) 80px;
+}
+
+.sim-lede {
+  max-width: 68ch;
+  margin-bottom: 26px;
+  font-size: 13.5px;
+  line-height: 1.75;
+  color: var(--ink-3);
+}
+
+.sim-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 18px;
+}
+
+.sim-world {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  min-height: 340px;
+  padding: 22px 22px 24px;
+  border: 1px solid var(--glass-border);
+  border-radius: 24px;
+  overflow: hidden;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 260ms var(--ease), border-color 200ms ease, box-shadow 260ms var(--ease);
+}
+
+.sim-world:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 34px 70px -40px color-mix(in srgb, var(--world-glow, var(--accent)) 80%, transparent);
+}
+
+.sim-world.is-crystal {
+  --world-color: #b9a6ff;
+  --world-glow: #6d4aff;
+  background:
+    radial-gradient(120% 90% at 78% 8%, rgba(185, 166, 255, 0.28), transparent 58%),
+    linear-gradient(170deg, rgba(28, 24, 58, 0.92), rgba(8, 8, 20, 0.94));
+  border-color: rgba(185, 166, 255, 0.3);
+}
+
+.sim-world.is-ember {
+  --world-color: #ffb347;
+  --world-glow: #ff5c1a;
+  background:
+    radial-gradient(120% 90% at 76% 10%, rgba(255, 138, 61, 0.3), transparent 58%),
+    linear-gradient(170deg, rgba(46, 22, 10, 0.92), rgba(12, 7, 6, 0.95));
+  border-color: rgba(255, 179, 71, 0.32);
+}
+
+.sim-world.is-circuit {
+  --world-color: #5eead4;
+  --world-glow: #0891b2;
+  background:
+    repeating-linear-gradient(0deg, rgba(94, 234, 212, 0.05) 0 1px, transparent 1px 22px),
+    repeating-linear-gradient(90deg, rgba(94, 234, 212, 0.05) 0 1px, transparent 1px 22px),
+    linear-gradient(170deg, rgba(8, 32, 38, 0.94), rgba(5, 10, 14, 0.96));
+  border-color: rgba(94, 234, 212, 0.3);
+}
+
+.sim-orb {
+  position: relative;
+  width: 92px;
+  height: 92px;
+  margin-bottom: 8px;
+  flex: none;
+}
+
+.sim-orb-core {
+  position: absolute;
+  inset: 14px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 32% 28%, #ffffff, var(--world-color) 38%, color-mix(in srgb, var(--world-glow) 70%, #000) 82%);
+  box-shadow: 0 0 34px -6px var(--world-glow);
+  animation: sim-orb-spin 18s linear infinite;
+}
+
+.sim-world.is-crystal .sim-orb-core {
+  border-radius: 22%;
+  clip-path: polygon(50% 0%, 92% 34%, 78% 100%, 22% 100%, 8% 34%);
+}
+
+.sim-world.is-circuit .sim-orb-core {
+  border-radius: 16%;
+}
+
+.sim-orb-ring {
+  position: absolute;
+  inset: 0;
+  border: 1px dashed color-mix(in srgb, var(--world-color) 55%, transparent);
+  border-radius: 50%;
+  animation: sim-ring-spin 26s linear infinite;
+}
+
+.sim-orb-shine {
+  position: absolute;
+  inset: 22px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 22%, rgba(255, 255, 255, 0.55), transparent 46%);
+  pointer-events: none;
+}
+
+@keyframes sim-orb-spin {
+  from { transform: rotate(0deg) scale(1); }
+  50% { transform: rotate(180deg) scale(1.04); }
+  to { transform: rotate(360deg) scale(1); }
+}
+
+@keyframes sim-ring-spin {
+  to { transform: rotate(360deg); }
+}
+
+.sim-world-designation {
+  font-family: var(--mono);
+  font-size: 7.5px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--world-color);
+}
+
+.sim-world-name {
+  font-size: 26px;
+  font-weight: 650;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+  color: #f4f7ff;
+}
+
+.sim-world-latin {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(226, 236, 250, 0.55);
+}
+
+.sim-world-tag {
+  margin-top: 4px;
+  max-width: 34ch;
+  font-size: 12.5px;
+  line-height: 1.65;
+  color: rgba(226, 236, 250, 0.72);
+}
+
+.sim-world-traits {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.sim-world-traits em {
+  font-style: normal;
+  padding: 3px 8px;
+  border: 1px solid color-mix(in srgb, var(--world-color) 35%, transparent);
+  border-radius: 999px;
+  font-family: var(--mono);
+  font-size: 7.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--world-color) 85%, #fff);
+}
+
+.sim-world-enter {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: auto;
+  padding-top: 16px;
+  font-family: var(--mono);
+  font-size: 8.5px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--world-color);
+  transition: gap 200ms var(--ease);
+}
+
+.sim-world:hover .sim-world-enter { gap: 12px; }
+
+/* -------------------------- Hub kiểm tra đánh giá ------------------------- */
+
+.assess-page { min-height: 100%; }
+
+.assess-body {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 4px var(--gutter) 80px;
+}
+
+.assess-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.assess-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  background: var(--glass-soft);
+  backdrop-filter: blur(10px) saturate(150%);
+  -webkit-backdrop-filter: blur(10px) saturate(150%);
+  transition: border-color 180ms ease, transform 200ms var(--ease), background 180ms ease;
+}
+
+.assess-row:hover {
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  background: var(--glass-panel);
+  transform: translateY(-2px);
+}
+
+.assess-dot {
+  width: 10px;
+  height: 10px;
+  flex: none;
+  border-radius: 50%;
+}
+
+.assess-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+  min-width: 0;
+}
+
+.assess-copy strong {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.assess-copy span {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* --------------------- Vành đai trong bảng chỉ mục 3D --------------------- */
+
+.solar-section-divider {
+  margin: 14px 12px 4px;
+  padding-top: 10px;
+  border-top: 1px solid var(--sol-line);
+  font-family: var(--sol-mono);
+  font-size: 7.5px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--sol-faint);
+}
+
+.solar-row-belt .solar-order {
+  font-size: 12px;
+  color: #cfe1f7;
+}
+
+.solar-row-world {
+  min-height: 50px;
+}
+
+.solar-row-world .solar-row-main b {
+  letter-spacing: 0.06em;
+}
+
+/* ------------------------------ Responsive -------------------------------- */
+
+@media (max-width: 760px) {
+  .settings-body { padding-top: 16px; }
+  .sim-world { min-height: 300px; padding: 18px; }
+  .sim-orb { width: 76px; height: 76px; }
+  .sim-world-name { font-size: 22px; }
+  .assess-row { padding: 12px 13px; gap: 10px; }
+  .assess-row .btn { flex: none; }
+  .device-code-big { font-size: 19px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sim-orb-core,
+  .sim-orb-ring,
+  .settings-sheet {
+    animation: none !important;
+  }
+
+  .sim-world:hover,
+  .assess-row:hover {
+    transform: none;
+  }
+}

@@ -13,7 +13,7 @@ import { buildFallbackArtifacts } from "./fallbackArtifacts";
 import * as api from "./api";
 import { SYSTEM_FOCUS, type SolarFocus } from "./solar";
 
-export type View = "home" | "library" | "lesson" | "create" | "account" | "study" | "geometry" | "lab" | "arduino";type Tab = "lecture" | "mindmap" | "interactive" | "quiz";
+export type View = "home" | "library" | "lesson" | "create" | "account" | "study" | "geometry" | "lab" | "arduino" | "sim" | "assess" | "settings";type Tab = "lecture" | "mindmap" | "interactive" | "quiz";
 type ChannelStatus = "idle" | "pending" | "done" | "error";
 
 interface PipelineState {

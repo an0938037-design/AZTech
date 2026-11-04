@@ -324,7 +324,7 @@ export default function CreateLesson() {
                 <button
                   type="button"
                   className="btn btn-ghost btn-sm full"
-                  onClick={() => setView("account")}
+                  onClick={() => setView("settings")}
                 >
                   CẤU HÌNH AI <ArrowRight size={13} />
                 </button>
@@ -339,7 +339,7 @@ export default function CreateLesson() {
                 <button
                   type="button"
                   className="btn btn-ghost btn-sm full"
-                  onClick={() => setView("account")}
+                  onClick={() => setView("settings")}
                 >
                   KẾT NỐI TÀI KHOẢN <ArrowRight size={13} />
                 </button>

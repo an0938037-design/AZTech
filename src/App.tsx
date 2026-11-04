@@ -6,6 +6,9 @@ import Library from "./components/Library";
 import { lazy, Suspense } from "react";
 import StudyCorner from "./components/StudyCorner";
 import LandingHome from "./components/LandingHome";
+import SimulationHub from "./components/SimulationHub";
+import AssessmentHub from "./components/AssessmentHub";
+import Settings from "./components/Settings";
 const GeometrySpace = lazy(() => import("./components/GeometrySpace"));
 const ChemistryLab = lazy(() => import("./components/ChemistryLab"));
 const ArduinoStudio = lazy(() => import("./components/ArduinoStudio"));
@@ -14,6 +17,8 @@ const LessonViewer = lazy(() => import("./components/LessonViewer"));
 import PipelineOverlay from "./components/PipelineOverlay";
 import SolarDashboard from "./components/SolarDashboard";
 import TopStatus from "./components/TopStatus";
+import "./layout.css";
+import { AppearanceProvider } from "./palettes";
 import { useStore } from "./store";
 
 export default function App() {
@@ -43,6 +48,7 @@ export default function App() {
 
   return (
     <div className="app-shell">
+      <AppearanceProvider />
       {/* Nền hệ mặt trời toàn màn hình phía sau toàn bộ web. */}
       <SolarDashboard ambient={view !== "home"} />
       <Sidebar open={sidebarOpen} onClose={closeSidebar} />
@@ -71,6 +77,9 @@ export default function App() {
           )}
           {view === "lesson" && !activeId && <LandingHome />}
           {view === "study" && <StudyCorner />}
+          {view === "sim" && <SimulationHub />}
+          {view === "assess" && <AssessmentHub />}
+          {view === "settings" && <Settings />}
           {view === "geometry" && (
             <Suspense fallback={<div className="empty-state"><p>Đang tải không gian 3D…</p></div>}>
               <GeometrySpace />
