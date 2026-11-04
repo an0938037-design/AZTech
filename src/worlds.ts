@@ -1,3 +1,4 @@
+import { BELT } from "./solar";
 import type { View } from "./store";
 
 /* Ba thế giới giả tưởng nằm trong vành đai tiểu hành tinh — mỗi thế giới một
@@ -19,6 +20,13 @@ export interface SimWorld {
   speed: number;
 }
 
+export const BELT_INNER = BELT.inner;
+export const BELT_OUTER = BELT.outer;
+
+/* Ba thế giới nằm rải trong dải vành đai đã chừa sẵn giữa Sao Hoả và Sao Mộc. */
+const beltSpan = BELT.outer - BELT.inner;
+const beltAt = (fraction: number) => BELT.inner + beltSpan * fraction;
+
 export const SIM_WORLDS: SimWorld[] = [
   {
     id: "crystal",
@@ -31,8 +39,8 @@ export const SIM_WORLDS: SimWorld[] = [
     color: "#b9a6ff",
     glow: "#6d4aff",
     surface: "crystal",
-    orbit: 8.7,
-    size: 0.3,
+    orbit: beltAt(0.16),
+    size: 0.26,
     phase: 0.4,
     speed: 0.055,
   },
@@ -47,8 +55,8 @@ export const SIM_WORLDS: SimWorld[] = [
     color: "#ffb347",
     glow: "#ff5c1a",
     surface: "ember",
-    orbit: 9.2,
-    size: 0.34,
+    orbit: beltAt(0.5),
+    size: 0.3,
     phase: 2.4,
     speed: 0.047,
   },
@@ -63,12 +71,9 @@ export const SIM_WORLDS: SimWorld[] = [
     color: "#5eead4",
     glow: "#0891b2",
     surface: "circuit",
-    orbit: 9.7,
-    size: 0.28,
+    orbit: beltAt(0.84),
+    size: 0.24,
     phase: 4.3,
     speed: 0.041,
   },
 ];
-
-export const BELT_INNER = 8.35;
-export const BELT_OUTER = 10.05;

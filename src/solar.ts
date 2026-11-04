@@ -88,7 +88,7 @@ export const PLANETS: PlanetSpec[] = [
     latin: "Earth",
     subject: "Sinh học",
     aliases: ["sinh hoc", "sinh học", "sinh ly", "sinh lý", "biology", "sinh"],
-    radius: 0.54,
+    radius: 0.5,
     orbit: 6.0,
     orbitSpeed: 0.047,
     spin: 0.72,
@@ -125,7 +125,7 @@ export const PLANETS: PlanetSpec[] = [
     latin: "Jupiter",
     subject: "Vật lý",
     aliases: ["vat ly", "vật lý", "vat li", "vật lí", "physics", "ly", "lí"],
-    radius: 1.32,
+    radius: 1.15,
     orbit: 10.4,
     orbitSpeed: 0.027,
     spin: 1.1,
@@ -147,7 +147,7 @@ export const PLANETS: PlanetSpec[] = [
     latin: "Saturn",
     subject: "Toán học",
     aliases: ["toan", "toán", "math", "mathematics", "dai so", "đại số", "hinh hoc", "hình học", "giai tich", "giải tích"],
-    radius: 1.12,
+    radius: 0.98,
     orbit: 13.1,
     orbitSpeed: 0.02,
     spin: 1.0,
@@ -155,7 +155,7 @@ export const PLANETS: PlanetSpec[] = [
     phase: 3.4,
     atmosphere: "#e3ceA4",
     atmosphereIntensity: 0.3,
-    ring: { inner: 1.45, outer: 2.55, opacity: 0.95 },
+    ring: { inner: 1.4, outer: 2.2, opacity: 0.95 },
     moons: [
       { id: "titan", name: "Titan", kind: "titan", radius: 0.34, seed: 3 },
       { id: "rhea", name: "Rhea", kind: "moon", radius: 0.21, seed: 44 },
@@ -170,7 +170,7 @@ export const PLANETS: PlanetSpec[] = [
     latin: "Uranus",
     subject: "Địa lý",
     aliases: ["dia ly", "địa lý", "dia li", "địa lí", "geography", "trai dat", "trái đất"],
-    radius: 0.72,
+    radius: 0.66,
     orbit: 15.5,
     orbitSpeed: 0.0155,
     spin: -0.5,
@@ -178,7 +178,7 @@ export const PLANETS: PlanetSpec[] = [
     phase: 0.9,
     atmosphere: "#a4e0e6",
     atmosphereIntensity: 0.42,
-    ring: { inner: 1.55, outer: 1.85, opacity: 0.3 },
+    ring: { inner: 1.5, outer: 1.78, opacity: 0.3 },
     moons: [
       { id: "titania", name: "Titania", kind: "moon", radius: 0.24, seed: 6 },
       { id: "oberon", name: "Oberon", kind: "moon", radius: 0.22, seed: 15 },
@@ -193,7 +193,7 @@ export const PLANETS: PlanetSpec[] = [
     latin: "Neptune",
     subject: "Hoá học",
     aliases: ["hoa hoc", "hoá học", "hóa học", "chemistry", "hoa", "hóa", "hoá"],
-    radius: 0.7,
+    radius: 0.64,
     orbit: 17.8,
     orbitSpeed: 0.0125,
     spin: 0.62,
@@ -214,6 +214,66 @@ export const PLANET_BY_ID: Record<PlanetId, PlanetSpec> = PLANETS.reduce(
     return acc;
   },
   {} as Record<PlanetId, PlanetSpec>
+);
+
+/* ------------------------------- Hình học --------------------------------
+   "Tầm với" của một hành tinh = bán kính thân, vành đai, hoặc quỹ đạo vệ tinh
+   ngoài cùng. Quỹ đạo được giãn theo tầm với để không thiên thể nào chạm nhau. */
+export const SATELLITE_LANES = 3;
+
+export function satelliteOrbitRadius(planet: PlanetSpec, lane: number): number {
+  return planet.radius * (1.35 + lane * 0.16) + 0.08;
+}
+
+export function satelliteRenderSize(planet: PlanetSpec, moonRadius?: number | null): number {
+  const craft = Math.min(Math.max(planet.radius * 0.17, 0.055), 0.16);
+  const raw = moonRadius ? Math.min(moonRadius, planet.radius * 0.42) : craft;
+  return Math.min(raw, planet.radius * 0.3);
+}
+
+export function planetReach(planet: PlanetSpec): number {
+  const ring = planet.ring ? planet.radius * planet.ring.outer : 0;
+  const biggestMoon = planet.moons.reduce((max, moon) => Math.max(max, moon.radius), 0);
+  const satellites =
+    satelliteOrbitRadius(planet, SATELLITE_LANES - 1) + satelliteRenderSize(planet, biggestMoon);
+  return Math.max(planet.radius * 1.14, ring, satellites);
+}
+
+const ORBIT_GAP = 0.6;
+const BELT_WIDTH = 1.7;
+const BELT_CLEARANCE = 0.5;
+
+(function layoutOrbits() {
+  let cursor = 2.9;
+  PLANETS[0].orbit = cursor;
+  for (let i = 1; i < PLANETS.length; i += 1) {
+    const prev = PLANETS[i - 1];
+    const current = PLANETS[i];
+    let gap = planetReach(prev) + planetReach(current) + ORBIT_GAP;
+    /* Chừa nguyên một dải rộng cho vành đai tiểu hành tinh sau Sao Hoả. */
+    if (current.id === "jupiter") gap += BELT_WIDTH + BELT_CLEARANCE * 2;
+    cursor += gap;
+    current.orbit = cursor;
+  }
+})();
+
+const MARS_SPEC = PLANET_BY_ID.mars;
+const JUPITER_SPEC = PLANET_BY_ID.jupiter;
+
+export const BELT = {
+  inner: MARS_SPEC.orbit + planetReach(MARS_SPEC) + BELT_CLEARANCE,
+  outer:
+    JUPITER_SPEC.orbit -
+    planetReach(JUPITER_SPEC) -
+    BELT_CLEARANCE,
+  get center() {
+    return (this.inner + this.outer) / 2;
+  },
+};
+
+export const SCENE_EXTENT = PLANETS.reduce(
+  (max, planet) => Math.max(max, planet.orbit + planetReach(planet)),
+  0
 );
 
 export type SatelliteKind = "natural" | "artificial";
@@ -409,7 +469,7 @@ function chapterFor(
     kind: natural ? "natural" : "artificial",
     moon,
     craft: CRAFTS[index % CRAFTS.length],
-    orbitRadius: planet.radius * (2.05 + lane * 0.42) + 0.16,
+    orbitRadius: satelliteOrbitRadius(planet, lane),
     phase: index * 2.399 + planet.order * 0.7,
     speed: (0.32 + lane * 0.06) * (index % 2 === 0 ? 1 : -1),
     stations,

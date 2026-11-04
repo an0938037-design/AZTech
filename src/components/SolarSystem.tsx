@@ -3,6 +3,8 @@ import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import {
   PLANETS,
+  satelliteRenderSize,
+  SCENE_EXTENT,
   type PlanetId,
   type PlanetSpec,
   type SolarChapter,
@@ -116,8 +118,12 @@ interface Bundle {
   dispose: () => void;
 }
 
+/* Khoảng cách mặc định: trọn tầm với lớn nhất của hệ theo chiều dọc màn hình. */
+const CAMERA_FOV = 42;
+const FIT_DISTANCE = (SCENE_EXTENT / Math.tan(((CAMERA_FOV / 2) * Math.PI) / 180)) * 1.06;
+
 const SYSTEM_POSE: Pose = {
-  position: new THREE.Vector3(0, 30, 40),
+  position: new THREE.Vector3(0, FIT_DISTANCE * 0.62, FIT_DISTANCE * 0.78),
   target: new THREE.Vector3(0, 0, 0),
 };
 
@@ -146,11 +152,11 @@ function satelliteLocal(chapter: SolarChapter, time: number): THREE.Vector3 {
 }
 
 function craftSize(spec: PlanetSpec): number {
-  return clamp(spec.radius * 0.17, 0.055, 0.16);
+  return satelliteRenderSize(spec);
 }
 
 function satelliteSize(chapter: SolarChapter, spec: PlanetSpec): number {
-  if (chapter.kind === "natural" && chapter.moon) return chapter.moon.radius;
+  if (chapter.kind === "natural" && chapter.moon) return satelliteRenderSize(spec, chapter.moon.radius);
   return craftSize(spec);
 }
 
@@ -442,8 +448,8 @@ export default function SolarSystem({
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x03050c);
 
-    const camera = new THREE.PerspectiveCamera(42, (host.clientWidth || 1) / (host.clientHeight || 1), 0.05, 1200);
-    camera.position.set(0, 24, 48);
+    const camera = new THREE.PerspectiveCamera(CAMERA_FOV, (host.clientWidth || 1) / (host.clientHeight || 1), 0.05, 1200);
+    camera.position.copy(SYSTEM_POSE.position);
 
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
@@ -452,10 +458,8 @@ export default function SolarSystem({
     controls.zoomSpeed = 0.9;
     controls.enablePan = false;
     controls.enableZoom = true;
-    controls.minDistance = 2.0;
-    controls.maxDistance = 120;
     controls.minDistance = 1.2;
-    controls.maxDistance = 90;
+    controls.maxDistance = FIT_DISTANCE * 2.4;
     controls.minPolarAngle = 0.12;
     controls.maxPolarAngle = Math.PI - 0.12;
     controls.autoRotate = false;
@@ -1033,6 +1037,10 @@ export default function SolarSystem({
         holder.position.copy(satelliteLocal(chapter, satTime()));
         const size = satelliteSize(chapter, entry.spec);
         const modelGroup = chapter.kind === "natural" ? makeMoon(chapter) : makeCraft(chapter, entry.spec);
+        if (chapter.kind === "natural" && chapter.moon) {
+          /* Vệ tinh được thu theo tỉ lệ đã cap để không vượt tầm với hành tinh. */
+          modelGroup.scale.setScalar(size / Math.max(chapter.moon.radius, 0.001));
+        }
         holder.add(modelGroup);
         const hit = new THREE.Mesh(
           new THREE.SphereGeometry(Math.max(size * 1.35, 0.06), 10, 8),
@@ -1224,11 +1232,13 @@ export default function SolarSystem({
 
     bundle.applyFocus = applyFocus;
 
-    /* Góc nhìn thẳng từ trên xuống cho chế độ nền: trọn vẹn quỹ đạo mọi hành tinh. */
+    /* Góc nhìn thẳng từ trên xuống cho chế độ nền: trọn tầm với mọi hành tinh. */
     const topDownPose = (): Pose => {
-      const maxOrbit = PLANETS.reduce((max, item) => Math.max(max, item.orbit), 1) * 1.16;
       const tanHalf = Math.tan((camera.fov * Math.PI) / 360);
-      const distance = Math.max(maxOrbit / tanHalf, maxOrbit / (tanHalf * Math.max(0.4, camera.aspect)));
+      const distance = Math.max(
+        SCENE_EXTENT / tanHalf,
+        SCENE_EXTENT / (tanHalf * Math.max(0.4, camera.aspect))
+      ) * 1.04;
       return {
         position: new THREE.Vector3(0, distance, distance * 0.002),
         target: new THREE.Vector3(0, 0, 0),
