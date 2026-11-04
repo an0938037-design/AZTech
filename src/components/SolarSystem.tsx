@@ -52,7 +52,6 @@ interface Props {
   onOpenStation: (chapter: SolarChapter, station: SolarStation) => void;
   onOpenSun: () => void;
   onOpenBelt?: () => void;
-  onOpenWorld?: (worldId: SimWorld["id"]) => void;
   onReady: () => void;
   onFallback: () => void;
 }
@@ -147,6 +146,15 @@ function easeInOutCubic(t: number): number {
 function planetPosition(spec: PlanetSpec, time: number): THREE.Vector3 {
   const angle = spec.phase + time * spec.orbitSpeed;
   return new THREE.Vector3(Math.cos(angle) * spec.orbit, 0, Math.sin(angle) * spec.orbit);
+}
+
+function worldPosition(spec: SimWorld, time: number): THREE.Vector3 {
+  const angle = spec.phase + time * spec.speed;
+  return new THREE.Vector3(
+    Math.cos(angle) * spec.orbit,
+    Math.sin(angle * 2.4 + spec.phase) * 0.16,
+    Math.sin(angle) * spec.orbit
+  );
 }
 
 function satelliteLocal(chapter: SolarChapter, time: number): THREE.Vector3 {
@@ -391,14 +399,13 @@ export default function SolarSystem({
   onOpenStation,
   onOpenSun,
   onOpenBelt,
-  onOpenWorld,
   onReady,
   onFallback,
 }: Props) {
   const hostRef = useRef<HTMLDivElement>(null);
   const labelsRef = useRef<HTMLDivElement>(null);
   const bundleRef = useRef<Bundle | null>(null);
-  const propsRef = useRef({ model, focus, ambient, inset, insetY, onFocus, onHover, onOpenStation, onOpenSun, onOpenBelt, onOpenWorld, onReady, onFallback });
+  const propsRef = useRef({ model, focus, ambient, inset, insetY, onFocus, onHover, onOpenStation, onOpenSun, onOpenBelt, onReady, onFallback });
   const elapsedRef = useRef(0);
   const frozenPlanetRef = useRef(0);
   const frozenChapterRef = useRef(0);
@@ -414,7 +421,7 @@ export default function SolarSystem({
   });
 
   useEffect(() => {
-    propsRef.current = { model, focus, ambient, inset, insetY, onFocus, onHover, onOpenStation, onOpenSun, onOpenBelt, onOpenWorld, onReady, onFallback };
+    propsRef.current = { model, focus, ambient, inset, insetY, onFocus, onHover, onOpenStation, onOpenSun, onOpenBelt, onReady, onFallback };
   });
 
   /* ------------------------------ dựng scene ------------------------------ */
@@ -934,6 +941,15 @@ export default function SolarSystem({
       return withInset({ position, target: center.clone() });
     };
 
+    /** Phóng vào một thế giới phòng lab trong vành đai. */
+    const worldPose = (entry: WorldEntry): Pose => {
+      const center = worldPosition(entry.spec, frozenPlanetRef.current);
+      const fit = Math.max(1, 0.92 / Math.max(0.2, camera.aspect));
+      const distance = (entry.spec.size * 4.8 + 0.9) * fit;
+      const position = center.clone().addScaledVector(litDirection(center), distance);
+      return withInset({ position, target: center.clone() });
+    };
+
     const chapterPose = (entry: PlanetEntry, satellite: SatelliteEntry): Pose => {
       const center = planetPosition(entry.spec, frozenPlanetRef.current);
       const local = satelliteLocal(satellite.chapter, frozenChapterRef.current);
@@ -961,12 +977,12 @@ export default function SolarSystem({
       pickables.length = 0;
       if (sunMesh.visible) pickables.push(sunMesh);
       const f = focusRef.current;
-      if (f.level === "system") {
+      if (f.level === "system" || f.level === "world") {
         pickables.push(beltHit);
         for (const world of worlds) pickables.push(world.hit);
       }
       for (const entry of planets) {
-        if (f.level === "system") {
+        if (f.level === "system" || f.level === "world") {
           pickables.push(entry.mesh);
           continue;
         }
@@ -1159,23 +1175,24 @@ export default function SolarSystem({
     };
 
     const applyVisibility = (next: SolarFocus) => {
+      const showAll = next.level === "system" || next.level === "world";
       for (const entry of planets) {
         const focused = entry.spec.id === next.planetId;
-        entry.root.visible = next.level === "system" || focused;
-        entry.orbitLine.visible = next.level === "system";
+        entry.root.visible = showAll || focused;
+        entry.orbitLine.visible = showAll;
         (entry.orbitLine.material as THREE.LineBasicMaterial).opacity =
-          next.level === "system" ? (focused ? 0.4 : 0.2) : 0;
-        entry.satelliteGroup.visible = next.level === "system" || focused;
+          showAll ? (focused ? 0.4 : 0.2) : 0;
+        entry.satelliteGroup.visible = showAll || focused;
         for (const satellite of entry.satellites) {
-          satellite.holder.visible = next.level === "system" || focused;
-          satellite.orbitLine.visible = next.level !== "system" && focused;
+          satellite.holder.visible = showAll || focused;
+          satellite.orbitLine.visible = !showAll && focused;
           satellite.label.style.display = "";
           const isCurrent = next.chapterId === satellite.chapter.id;
           satellite.stationGroup.visible = next.level === "chapter" && focused && isCurrent;
         }
-        if (focused && next.level !== "system") {
+        if (focused && next.level === "planet") {
           scheduleNearDetail(entry);
-        } else if (entry.detail === "near" && next.level === "system") {
+        } else if (entry.detail === "near" && (showAll || next.level === "chapter")) {
           applyDetail(entry, "far");
         }
       }
@@ -1188,7 +1205,8 @@ export default function SolarSystem({
         !prev ||
         prev.level !== next.level ||
         prev.planetId !== next.planetId ||
-        prev.chapterId !== next.chapterId;
+        prev.chapterId !== next.chapterId ||
+        (prev.worldId ?? null) !== (next.worldId ?? null);
       if (!changed) return;
 
       const currentPose: Pose = { position: camera.position.clone(), target: controls.target.clone() };
@@ -1206,7 +1224,7 @@ export default function SolarSystem({
         if (prev.level === "chapter" && prev.chapterId) memoryRef.current.chapters.set(prev.chapterId, currentPose);
       }
 
-      if (next.level !== "system" && (!prev || prev.level === "system")) {
+      if (next.level !== "system" && (!prev || prev.level === "system" || prev.level === "world")) {
         frozenPlanetRef.current = elapsedRef.current;
       }
       if (next.level === "chapter") {
@@ -1235,11 +1253,11 @@ export default function SolarSystem({
 
       // Ánh sáng riêng cho Sao Thổ để vành đổ bóng lên hành tinh.
       const saturn = planets.find((entry) => entry.spec.id === "saturn") ?? null;
-      const saturnFocused = next.planetId === "saturn" && next.level !== "system" && saturn !== null;
+      const saturnFocused = next.planetId === "saturn" && (next.level === "planet" || next.level === "chapter") && saturn !== null;
       saturnSpot.visible = saturnFocused;
       saturnSpot.intensity = saturnFocused ? 2.1 : 0;
       pointLight.intensity = saturnFocused ? 0.85 : 2.35;
-      fillLight.intensity = next.level === "chapter" ? 0.95 : next.level === "planet" ? 0.2 : 0.1;
+      fillLight.intensity = next.level === "chapter" ? 0.95 : next.level === "planet" ? 0.2 : next.level === "world" ? 0.35 : 0.1;
       if (saturnFocused && saturn) {
         saturnSpot.target = saturn.root;
         saturnSpot.target.updateMatrixWorld();
@@ -1253,6 +1271,9 @@ export default function SolarSystem({
           position: base.target.clone().add(base.position.clone().sub(base.target).multiplyScalar(fit)),
           target: base.target.clone(),
         };
+      } else if (next.level === "world") {
+        const entry = worlds.find((item) => item.spec.id === next.worldId);
+        pose = entry ? worldPose(entry) : SYSTEM_POSE;
       } else if (next.level === "planet") {
         const entry = planets.find((item) => item.spec.id === next.planetId);
         if (!entry) {
@@ -1486,7 +1507,12 @@ export default function SolarSystem({
       if (hover.kind === "belt") {
         propsRef.current.onOpenBelt?.();
       } else if (hover.kind === "world" && hover.worldId) {
-        propsRef.current.onOpenWorld?.(hover.worldId);
+        propsRef.current.onFocus({
+          level: "world",
+          planetId: null,
+          chapterId: null,
+          worldId: hover.worldId,
+        });
       } else if (hover.kind === "sun") {
         propsRef.current.onOpenSun();
       } else if (hover.kind === "planet" && hover.planetId) {
@@ -1562,6 +1588,10 @@ export default function SolarSystem({
     const updateLabels = () => {
       if (ambientRef.current) return;
       const current = focusRef.current;
+      const hover = hoverRef.current;
+      /* Tên hành tinh / Mặt Trời chỉ hiện khi con trỏ thật sự trỏ vào vật thể. */
+      const hoveredPlanetId = hover?.kind === "planet" ? hover.planetId : null;
+      const sunHovered = hover?.kind === "sun";
       const minX = bundle.inset - 4;
       const tanHalf = Math.tan(((camera.fov * Math.PI) / 180) / 2);
       const pxPerUnit = (world: THREE.Vector3) =>
@@ -1616,7 +1646,11 @@ export default function SolarSystem({
         const world = entry.root.position.clone();
         const point = project(world);
         const show =
-          current.level === "system" && entry.root.visible && point.visible && point.x > minX;
+          current.level === "system" &&
+          entry.root.visible &&
+          point.visible &&
+          point.x > minX &&
+          hoveredPlanetId === entry.spec.id;
         if (!show) {
           entry.label.style.opacity = "0";
           continue;
@@ -1642,10 +1676,14 @@ export default function SolarSystem({
       }
 
       // Nhãn Mặt Trời đặt sau cùng để không đẩy nhãn các hành tinh ra xa.
-      const { w: sunW, h: sunH } = sizeOf(sunLabel, 106, 34);
-      const sunY = place(sunPoint.x, sunPoint.y + sunRadius + 10 + sunH / 2, sunW, sunH);
-      sunLabel.style.transform = `translate3d(${sunPoint.x}px, ${sunY}px, 0) translate(-50%, -50%)`;
-      sunLabel.style.opacity = current.level === "system" && sunPoint.visible ? "1" : "0";
+      if (sunHovered && current.level === "system" && sunPoint.visible) {
+        const { w: sunW, h: sunH } = sizeOf(sunLabel, 106, 34);
+        const sunY = place(sunPoint.x, sunPoint.y + sunRadius + 10 + sunH / 2, sunW, sunH);
+        sunLabel.style.transform = `translate3d(${sunPoint.x}px, ${sunY}px, 0) translate(-50%, -50%)`;
+        sunLabel.style.opacity = "1";
+      } else {
+        sunLabel.style.opacity = "0";
+      }
 
       const focusedEntry = planets.find((item) => item.spec.id === current.planetId) ?? null;
       if (focusedEntry && (current.level === "planet" || current.level === "chapter")) {
@@ -1715,12 +1753,7 @@ export default function SolarSystem({
 
       beltGroup.rotation.y += delta * 0.012;
       for (const world of worlds) {
-        const angle = world.spec.phase + orbitClock * world.spec.speed;
-        world.group.position.set(
-          Math.cos(angle) * world.spec.orbit,
-          Math.sin(angle * 2.4 + world.spec.phase) * 0.16,
-          Math.sin(angle) * world.spec.orbit
-        );
+        world.group.position.copy(worldPosition(world.spec, orbitClock));
         world.group.rotation.y += delta * world.spin;
       }
 

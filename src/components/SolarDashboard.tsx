@@ -29,6 +29,7 @@ import { SIM_WORLDS, type SimWorld } from "../worlds";
 function levelLabel(level: SolarFocus["level"]): string {
   if (level === "planet") return "HÀNH TINH";
   if (level === "chapter") return "CHƯƠNG HỌC";
+  if (level === "world") return "THẾ GIỚI MÔ PHỎNG";
   return "HỆ MẶT TRỜI";
 }
 
@@ -43,6 +44,7 @@ export default function SolarDashboard({ ambient = false }: { ambient?: boolean 
   const setSolarFocus = useStore((s) => s.setSolarFocus);
   const sceneFocus = ambient ? SYSTEM_FOCUS : focus;
   const setView = useStore((s) => s.setView);
+  const setSceneFade = useStore((s) => s.setSceneFade);
   const setField = useStore((s) => s.setField);
   const setTab = useStore((s) => s.setTab);
   const openLesson = useStore((s) => s.openLesson);
@@ -110,7 +112,15 @@ export default function SolarDashboard({ ambient = false }: { ambient?: boolean 
   }, [focus.level, query, panelOpen]);
   const planet = planetById(model, focus.planetId);
   const chapter = chapterById(model, focus.planetId, focus.chapterId);
-  const panelAccent = planet ? PLANET_ACCENT[planet.spec.id] : "#9fb4d8";
+  const world =
+    focus.level === "world" && focus.worldId
+      ? SIM_WORLDS.find((item) => item.id === focus.worldId) ?? null
+      : null;
+  const panelAccent = world
+    ? world.color
+    : planet
+      ? PLANET_ACCENT[planet.spec.id]
+      : "#9fb4d8";
   const hoverAccent = hover?.planetId ? PLANET_ACCENT[hover.planetId] : null;
   const onReady = useCallback(() => setReady(true), []);
   const onFallback = useCallback(() => setFallback(true), []);
@@ -159,9 +169,14 @@ export default function SolarDashboard({ ambient = false }: { ambient?: boolean 
     [lessons]
   );
 
-  const openWorld = (id: SimWorld["id"]) => {
-    const world = SIM_WORLDS.find((item) => item.id === id);
-    if (world) setView(world.view);
+  /* Phóng vào hành tinh phòng lab trước, rồi mờ dần sang phòng mô phỏng. */
+  const enterWorld = (target: SimWorld) => {
+    setAiOpen(false);
+    setSceneFade(true);
+    window.setTimeout(() => {
+      setView(target.view);
+      window.setTimeout(() => setSceneFade(false), 80);
+    }, 420);
   };
 
   const askAi = () => {
@@ -224,7 +239,6 @@ export default function SolarDashboard({ ambient = false }: { ambient?: boolean 
           onOpenStation={ambient ? noop : openStation}
           onOpenSun={ambient ? noop : () => setAiOpen(true)}
           onOpenBelt={ambient ? noop : () => setView("assess")}
-          onOpenWorld={ambient ? noop : openWorld}
           onReady={ambient ? noopReady : onReady}
           onFallback={ambient ? noopFallback : onFallback}
         />
@@ -297,6 +311,11 @@ export default function SolarDashboard({ ambient = false }: { ambient?: boolean 
                       {chapter.visited}/{chapter.total} trạm
                     </>
                   )}
+                  {focus.level === "world" && world && (
+                    <>
+                      {world.latin} · {world.designation}
+                    </>
+                  )}
                 </p>
               </>
             )}
@@ -320,6 +339,12 @@ export default function SolarDashboard({ ambient = false }: { ambient?: boolean 
                   <>
                     <ChevronRight size={12} className="solar-crumb-sep" />
                     <span className="solar-crumb is-current">{short(chapter.title, 32)}</span>
+                  </>
+                )}
+                {!breadcrumbPlanet && !chapter && world && (
+                  <>
+                    <ChevronRight size={12} className="solar-crumb-sep" />
+                    <span className="solar-crumb is-current">{world.name}</span>
                   </>
                 )}
               </>
@@ -504,7 +529,9 @@ export default function SolarDashboard({ ambient = false }: { ambient?: boolean 
                       key={world.id}
                       type="button"
                       className="solar-row solar-row-world"
-                      onClick={() => setView(world.view)}
+                      onClick={() =>
+                        go({ level: "world", planetId: null, chapterId: null, worldId: world.id })
+                      }
                       style={
                         {
                           "--i": model.planets.length + 1 + index,
@@ -653,6 +680,67 @@ export default function SolarDashboard({ ambient = false }: { ambient?: boolean 
                 </div>
               </>
             )}
+            {focus.level === "world" && world && (
+              <>
+                <div className="solar-panel-head">
+                  <button type="button" className="solar-back" onClick={goSystem}>
+                    ← HỆ MẶT TRỜI
+                  </button>
+                  <span>VÀNH ĐAI</span>
+                </div>
+                <div className="solar-context is-world">
+                  <span className="solar-orb-mini" aria-hidden="true" />
+                  <div>
+                    <h2>{world.name}</h2>
+                    <p>{world.latin}</p>
+                    <p className="solar-world-tag">{world.tagline}</p>
+                    <span className="solar-world-traits">
+                      {world.traits.map((trait) => (
+                        <em key={trait}>{trait}</em>
+                      ))}
+                    </span>
+                  </div>
+                </div>
+                <div className="solar-list">
+                  <p className="solar-mini-title">THẾ GIỚI KHÁC TRONG VÀNH ĐAI</p>
+                  {SIM_WORLDS.filter((item) => item.id !== world.id).map((item, index) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      className="solar-row solar-row-world"
+                      onClick={() =>
+                        go({ level: "world", planetId: null, chapterId: null, worldId: item.id })
+                      }
+                      style={{ "--i": index, "--planet-accent": item.color } as CSSProperties}
+                    >
+                      <span
+                        className="solar-dot"
+                        aria-hidden="true"
+                        style={{
+                          background: item.color,
+                          boxShadow: `0 0 10px -2px ${item.color}`,
+                        }}
+                      />
+                      <span className="solar-row-main">
+                        <b>{item.name}</b>
+                        <em>{item.designation}</em>
+                      </span>
+                      <ChevronRight size={13} />
+                    </button>
+                  ))}
+                </div>
+                <div className="solar-panel-foot">
+                  <button
+                    type="button"
+                    className="solar-enter-btn"
+                    onClick={() => enterWorld(world)}
+                  >
+                    VÀO PHÒNG LAB
+                  </button>
+                  <span>{world.designation}</span>
+                </div>
+              </>
+            )}
           </aside>
         )}
 
@@ -679,7 +767,7 @@ export default function SolarDashboard({ ambient = false }: { ambient?: boolean 
                   : liveHover.kind === "belt"
                     ? "NHẤN ĐỂ VÀO KIỂM TRA ĐÁNH GIÁ"
                     : liveHover.kind === "world"
-                      ? "NHẤN ĐỂ NHẬP THẾ GIỚI"
+                      ? "NHẤN ĐỂ PHÓNG VÀO"
                       : "NHẤN ĐỂ ĐI SÂU"}
             </span>
           </div>

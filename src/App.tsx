@@ -24,6 +24,7 @@ import { useStore } from "./store";
 export default function App() {
   const view = useStore((s) => s.view);
   const activeId = useStore((s) => s.activeId);
+  const sceneFade = useStore((s) => s.sceneFade);
   const initAccount = useStore((s) => s.initAccount);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -99,6 +100,7 @@ export default function App() {
       </div>
 
       <PipelineOverlay />
+      <div className={`scene-fade ${sceneFade ? "is-on" : ""}`} aria-hidden="true" />
     </div>
   );
 }

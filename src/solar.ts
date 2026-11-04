@@ -326,18 +326,21 @@ export interface SolarModel {
   unmapped: number;
 }
 
-export type SolarLevel = "system" | "planet" | "chapter";
+export type SolarLevel = "system" | "planet" | "chapter" | "world";
 
 export interface SolarFocus {
   level: SolarLevel;
   planetId: PlanetId | null;
   chapterId: string | null;
+  /** Thế giới phòng lab trong vành đai, chỉ dùng khi level === "world". */
+  worldId?: string | null;
 }
 
 export const SYSTEM_FOCUS: SolarFocus = {
   level: "system",
   planetId: null,
   chapterId: null,
+  worldId: null,
 };
 
 /* --------------------------------------------------------------------------

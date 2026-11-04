@@ -635,6 +635,26 @@
   letter-spacing: 0.06em;
 }
 
+/* ------------------------- Chuyển cảnh vào lab ---------------------------- */
+
+.scene-fade {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  pointer-events: none;
+  opacity: 0;
+  background:
+    radial-gradient(70% 60% at 50% 46%, rgba(6, 9, 20, 0.62), rgba(3, 5, 12, 0.96) 78%),
+    rgba(3, 5, 12, 0.96);
+  transition: opacity 420ms ease-out;
+}
+
+.scene-fade.is-on {
+  opacity: 1;
+  pointer-events: auto;
+  transition: opacity 380ms ease-in;
+}
+
 /* ------------------------------ Responsive -------------------------------- */
 
 @media (max-width: 760px) {

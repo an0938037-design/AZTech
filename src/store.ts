@@ -52,8 +52,11 @@ interface AppState {
   deviceCode: string;
   account: AccountInfo | null;
   accountLoading: boolean;
+  /** Lớp mờ che màn hình khi phóng từ hành tinh phòng lab vào phòng mô phỏng. */
+  sceneFade: boolean;
 
   setView: (view: View) => void;
+  setSceneFade: (value: boolean) => void;
   setSolarFocus: (focus: SolarFocus) => void;
   setField: (key: "subject" | "topic" | "prompt" | "notes", value: string) => void;
   setDeviceCode: (code: string) => void;
@@ -261,8 +264,10 @@ export const useStore = create<AppState>((set, get) => {
       return genDeviceCode();
     })(),
     accountLoading: false,
+    sceneFade: false,
 
     setView: (view) => set({ view }),
+    setSceneFade: (value) => set({ sceneFade: value }),
     setSolarFocus: (solarFocus) => set({ solarFocus }),
     setField: (key, value) => set({ [key]: value } as any),
     setDeviceCode: (code) => {
