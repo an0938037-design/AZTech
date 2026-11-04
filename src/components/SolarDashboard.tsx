@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { CSSProperties } from "react";
 import {
   ChevronDown,
   ChevronRight,
@@ -108,6 +109,8 @@ export default function SolarDashboard({ ambient = false }: { ambient?: boolean 
   }, [focus.level, query, panelOpen]);
   const planet = planetById(model, focus.planetId);
   const chapter = chapterById(model, focus.planetId, focus.chapterId);
+  const panelAccent = planet ? PLANET_ACCENT[planet.spec.id] : "#9fb4d8";
+  const hoverAccent = hover?.planetId ? PLANET_ACCENT[hover.planetId] : null;
   const onReady = useCallback(() => setReady(true), []);
   const onFallback = useCallback(() => setFallback(true), []);
 
@@ -362,18 +365,20 @@ export default function SolarDashboard({ ambient = false }: { ambient?: boolean 
             id="solar-index-panel"
             aria-hidden={!panelOpen}
             inert={!panelOpen}
+            style={{ "--planet-accent": panelAccent } as CSSProperties}
           >
             <div className="solar-panel-head">
               <span>KẾT QUẢ</span>
               <span>{searchResults.planets.length + searchResults.chapters.length}</span>
             </div>
             <div className="solar-list">
-              {searchResults.planets.map((item) => (
+              {searchResults.planets.map((item, index) => (
                 <button
                   key={item.spec.id}
                   type="button"
                   className="solar-row solar-row-planet"
                   onClick={() => goPlanet(item.spec.id)}
+                  style={{ "--i": index } as CSSProperties}
                 >
                   <span className="solar-order">{String(item.spec.order).padStart(2, "0")}</span>
                   <span
@@ -391,7 +396,7 @@ export default function SolarDashboard({ ambient = false }: { ambient?: boolean 
                   <span className="solar-row-count">{item.chapterCount} ch.</span>
                 </button>
               ))}
-              {searchResults.chapters.map(({ planet: owner, chapter: entry }) => (
+              {searchResults.chapters.map(({ planet: owner, chapter: entry }, index) => (
                 <button
                   key={entry.id}
                   type="button"
@@ -399,6 +404,7 @@ export default function SolarDashboard({ ambient = false }: { ambient?: boolean 
                   onClick={() =>
                     go({ level: "chapter", planetId: owner.spec.id, chapterId: entry.id })
                   }
+                  style={{ "--i": index } as CSSProperties}
                 >
                   <span className={`solar-sat ${entry.kind}`}>{entry.kind === "natural" ? "●" : "▣"}</span>
                   <span className="solar-row-main">
@@ -423,6 +429,7 @@ export default function SolarDashboard({ ambient = false }: { ambient?: boolean 
             id="solar-index-panel"
             aria-hidden={!panelOpen}
             inert={!panelOpen}
+            style={{ "--planet-accent": panelAccent } as CSSProperties}
           >
             {focus.level === "system" && (
               <>
@@ -431,7 +438,7 @@ export default function SolarDashboard({ ambient = false }: { ambient?: boolean 
                   <span>{model.chapters} CHƯƠNG</span>
                 </div>
                 <div className="solar-list">
-                  {model.planets.map((item) => {
+                  {model.planets.map((item, index) => {
                     const empty = item.chapterCount === 0;
                     return (
                       <button
@@ -439,6 +446,7 @@ export default function SolarDashboard({ ambient = false }: { ambient?: boolean 
                         type="button"
                         className={`solar-row solar-row-planet ${empty ? "is-empty" : ""}`}
                         onClick={() => goPlanet(item.spec.id)}
+                        style={{ "--i": index } as CSSProperties}
                       >
                         <span className="solar-order">{String(item.spec.order).padStart(2, "0")}</span>
                         <span
@@ -492,7 +500,7 @@ export default function SolarDashboard({ ambient = false }: { ambient?: boolean 
                   </div>
                 </div>
                 <div className="solar-list">
-                  {planet.chapters.map((entry) => (
+                  {planet.chapters.map((entry, index) => (
                     <button
                       key={entry.id}
                       type="button"
@@ -500,6 +508,7 @@ export default function SolarDashboard({ ambient = false }: { ambient?: boolean 
                       onClick={() =>
                         go({ level: "chapter", planetId: planet.spec.id, chapterId: entry.id })
                       }
+                      style={{ "--i": index } as CSSProperties}
                     >
                       <span className={`solar-sat ${entry.kind}`}>{entry.kind === "natural" ? "●" : "▣"}</span>
                       <span className="solar-row-main">
@@ -565,6 +574,7 @@ export default function SolarDashboard({ ambient = false }: { ambient?: boolean 
                       type="button"
                       className={`solar-row solar-row-station ${station.visited ? "is-visited" : ""}`}
                       onClick={() => openStation(chapter, station)}
+                      style={{ "--i": index } as CSSProperties}
                     >
                       <span className="solar-station-index">
                         {station.visited ? "✓" : String(index + 1).padStart(2, "0")}
@@ -591,7 +601,10 @@ export default function SolarDashboard({ ambient = false }: { ambient?: boolean 
         )}
 
         {liveHover && !fallback && (
-          <div className={`solar-hover-card is-${liveHover.kind}`}>
+          <div
+            className={`solar-hover-card is-${liveHover.kind}`}
+            style={{ "--planet-accent": hoverAccent ?? "#cfe1f7" } as CSSProperties}
+          >
             <span className="solar-hover-kind">
               {liveHover.kind === "planet" && "HÀNH TINH"}
               {liveHover.kind === "chapter" && "CHƯƠNG HỌC"}
