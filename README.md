@@ -158,7 +158,7 @@ Hỗ trợ PDF, DOCX, PPTX, TXT/MD. Phần đọc PDF/DOCX/PPTX được **lazy-
 - **Sidebar** thu gọn/mở rộng bằng cách bấm chính logo **AI**; animation width + opacity + transform, nội dung không bị logo đè.
 - **Thanh trạng thái trên cùng** dồn toàn bộ thông tin về bên phải: màn hình hiện tại, LOCAL/CLOUD, nút quản lý và đồng hồ trực tiếp.
 - **10 bộ màu theo chủ đề hành tinh & sao**: Sao Thuỷ, Sao Kim, Trái Đất, Sao Hoả, Sao Mộc, Sao Thổ, Sao Thiên Vương, Sao Hải Vương, Mặt Trời và **Tinh Vân** (nền vũ trụ violet). Chế độ tối đảo vai trò primary ↔ accent; lựa chọn lưu trong `localStorage` (`theme`, `palette`).
-- Các màn hình chính: **Trang chủ** (chính là **Hệ mặt trời AZTeach**), **Thư viện** (chỉ trong sidebar), **Ghi chú**, **Tài khoản & AI**, **Hình học 3D**, **Phòng lab 3D**.
+- Các màn hình chính: **Trang chủ** (chính là **Hệ mặt trời AZTeach**), **Thư viện** (chỉ trong sidebar), **Ghi chú**, **Tài khoản & AI**, **Hình học 3D**, **Phòng lab 3D**, **Arduino**.
 - **Hệ mặt trời AZTeach** (`src/solar.ts`, `src/solarTextures.ts`, `SolarSystem.tsx`, `SolarDashboard.tsx`): Three.js, camera bay mượt giữa 3 tầng — **hệ mặt trời** (8 hành tinh theo thứ tự thật: Sao Thuỷ = Tin học, Sao Kim = Ngữ Văn & Ngoại ngữ, Trái Đất = Sinh học, Sao Hoả = Lịch sử, Sao Mộc = Vật lý, Sao Thổ = Toán học, Sao Thiên Vương = Địa lý, Sao Hải Vương = Hoá học), **hành tinh** (vệ tinh = các chương thật của môn, tự xuất hiện/biến mất theo dữ liệu) và **chương** (các trạm học phát sáng quanh vệ tinh). Mặt Trời là **AZ AI**.
   - Nhãn 2D chiếu từ toạ độ 3D, tự dồn chỗ (declutter) và chừa chỗ cho bảng chỉ mục; bảng chỉ mục chỉ mở khi đi vào hành tinh để cả hệ luôn trọn vẹn.
   - Bản đồ dữ liệu học tập và phần thiên văn học được tách riêng (`solarModel`, `buildStations`); tiến độ (số chương/trạm đã học) lưu trong `localStorage` (`solar-progress-v1`), ảnh hưởng tới độ sáng hành tinh, màu vệ tinh và trạm học.
@@ -169,6 +169,19 @@ Hỗ trợ PDF, DOCX, PPTX, TXT/MD. Phần đọc PDF/DOCX/PPTX được **lazy-
 - Hiện tượng trong cốc được mô phỏng bằng Three.js: dung dịch đổi màu/độ đục, bọt khí, kết tủa lắng, cục chất rắn, ngọn lửa, hơi nước/khói, bếp điện phát sáng và giọt rót. Màu accent bám theo bộ màu đang chọn.
 - Phòng phản ứng giữ **lịch sử 5 phản ứng** và **sổ tay sản phẩm** (chất đã điều chế); nút **Đun nóng** mở khoá phản ứng nhiệt phân, **Rửa cốc** reset thí nghiệm nhưng giữ lịch sử.
 - Ba chunk 3D (hình học, phòng lab, OrbitControls) đều được lazy-load.
+
+## Không gian Arduino (chạy trong trình duyệt)
+
+Không cần IDE, không cần board thật: sketch được **thông dịch ngay trong tab** bằng TypeScript thuần, chạy offline và không gửi mã nguồn lên server.
+
+- **Ngôn ngữ**: tập con C++ Arduino gồm biến, mảng một chiều, hàm, `if/for/while/do/switch`, toán tử đầy đủ, `#define`, `#include` (bỏ qua), `String`, `Servo`. Integer division và ép kiểu hoạt động giống C++.
+- **Hàm dựng sẵn**: `pinMode`, `digitalRead/Write`, `analogRead/Write`, `delay`, `delayMicroseconds`, `millis`, `micros`, `map`, `constrain`, `min/max/abs/round/floor/ceil/sqrt/sq/pow/sin/cos/tan`, `random`, `tone/noTone`, `Serial.*`, `Servo.attach/write/read/detach`.
+- **Bo mạch ảo** (sơ đồ đấu dây cố định): D13 LED đỏ, D12 vàng, D11 lá, D9 LED PWM, D2 nút nhấn (`INPUT_PULLUP`), A0 biến trở, D8 còi, D10 servo. Đèn, còi (Web Audio), servo và Serial Monitor cập nhật theo thời gian thực.
+- **Trình thông dịch dạng generator**: `delay()` tạm dừng mà không chặn UI; `millis()`/`micros()` lấy từ đồng hồ thực nên các sketch kiểu `millis() - last >= 500` chạy đúng.
+- **Editor** có tô màu cú pháp, đánh số dòng, báo lỗi kèm số dòng, `Ctrl+Enter` để chạy. **Serial Monitor** cho phép gửi dữ liệu xuống `Serial.read()`.
+- **8 ví dụ mẫu**: nháy LED, nút nhấn, biến trở → PWM, đèn giao thông, còi báo động, servo quét góc, đếm giây bằng `millis()`, điều khiển qua Serial.
+- Sketch, ví dụ đang chọn, trạng thái tắt tiếng và giá trị biến trở được lưu trong `localStorage` (`aztech-arduino-v1`). Chọn ví dụ chỉ nạp code; phải bấm **CHẠY** mới thực thi.
+- Toàn bộ nằm trong chunk lazy-load `ArduinoStudio` (~57 kB, gzip ~18 kB), không ảnh hưởng bundle chính.
 
 ## Scripts
 

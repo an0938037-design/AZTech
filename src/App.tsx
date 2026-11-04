@@ -8,6 +8,7 @@ import StudyCorner from "./components/StudyCorner";
 import LandingHome from "./components/LandingHome";
 const GeometrySpace = lazy(() => import("./components/GeometrySpace"));
 const ChemistryLab = lazy(() => import("./components/ChemistryLab"));
+const ArduinoStudio = lazy(() => import("./components/ArduinoStudio"));
 /* LessonViewer kéo theo react-markdown + micromark (~200KB) chỉ dùng khi mở bài. */
 const LessonViewer = lazy(() => import("./components/LessonViewer"));
 import PipelineOverlay from "./components/PipelineOverlay";
@@ -78,6 +79,11 @@ export default function App() {
           {view === "lab" && (
             <Suspense fallback={<div className="empty-state"><p>Đang tải phòng lab 3D…</p></div>}>
               <ChemistryLab />
+            </Suspense>
+          )}
+          {view === "arduino" && (
+            <Suspense fallback={<div className="empty-state"><p>Đang tải không gian Arduino…</p></div>}>
+              <ArduinoStudio />
             </Suspense>
           )}
         </main>

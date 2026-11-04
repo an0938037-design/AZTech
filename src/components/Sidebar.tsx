@@ -4,6 +4,7 @@ import {
   Box,
   ChevronRight,
   Cloud,
+  Cpu,
   FlaskConical,
   Library,
   LibraryBig,
@@ -347,6 +348,17 @@ export default function Sidebar({ open, onClose }: Props) {
         >
           <FlaskConical size={14} />
           <span>PHÒNG LAB 3D</span>
+        </button>
+        <button
+          type="button"
+          className={`sidebar-nav-item ${view === "arduino" ? "is-active" : ""}`}
+          onClick={() => {
+            setView("arduino");
+            onClose();
+          }}
+        >
+          <Cpu size={14} />
+          <span>ARDUINO</span>
         </button>
         <button
           type="button"
