@@ -627,13 +627,10 @@ export default function SolarSystem({
       beltGroup.add(edgeLine);
     }
 
+    /* Vành chạm chỉ là một ống mảnh nằm giữa dải đá; nếu dày, nó nuốt luôn ba
+       thế giới phòng lab cùng bán kính và không tài nào bấm được. */
     const beltHit = new THREE.Mesh(
-      new THREE.TorusGeometry(
-        (BELT_INNER + BELT_OUTER) / 2,
-        (BELT_OUTER - BELT_INNER) / 2 + 0.2,
-        6,
-        72
-      ),
+      new THREE.TorusGeometry((BELT_INNER + BELT_OUTER) / 2, 0.9, 3, 96),
       new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false })
     );
     beltHit.rotation.x = Math.PI / 2;
@@ -1370,11 +1367,28 @@ export default function SolarSystem({
     };
 
     /* --------------------------- tương tác chuột --------------------------- */
+    /* Thứ tự chạm: thiên thể nhỏ thắng vành đai. Tia nhìn phải xuyên qua dải đá
+       mới tới được hành tinh phòng lab, nên "gần nhất" không phải "được chọn". */
+    const HOVER_PRIORITY: SolarHover["kind"][] = [
+      "station",
+      "chapter",
+      "world",
+      "planet",
+      "sun",
+      "belt",
+    ];
+
     const findHover = (): SolarHover | null => {
       if (pointer.x < -1) return null;
       raycaster.setFromCamera(pointer, camera);
       const hits = raycaster.intersectObjects(pickables, false);
-      for (const hit of hits) {
+
+      for (const kind of HOVER_PRIORITY) {
+        const candidates = hits.filter(
+          (item) => (item.object.userData as { kind?: SolarHover["kind"] }).kind === kind
+        );
+        const hit = candidates[0];
+        if (!hit) continue;
         const data = hit.object.userData as {
           kind?: SolarHover["kind"];
           planetId?: PlanetId;
@@ -1382,8 +1396,8 @@ export default function SolarSystem({
           stationId?: string;
           title?: string;
         };
-        if (!data.kind) continue;
-        if (data.kind === "sun") {
+
+        if (kind === "sun") {
           return {
             kind: "sun",
             planetId: null,
@@ -1393,7 +1407,7 @@ export default function SolarSystem({
             meta: "Trợ lý học tập trung tâm",
           };
         }
-        if (data.kind === "belt") {
+        if (kind === "belt") {
           return {
             kind: "belt",
             planetId: null,
@@ -1403,19 +1417,20 @@ export default function SolarSystem({
             meta: "Kiểm tra · luyện đề · sửa bài",
           };
         }
-        if (data.kind === "world") {
+        if (kind === "world") {
           const world = worlds.find((item) => item.hit === hit.object);
+          if (!world) continue;
           return {
             kind: "world",
             planetId: null,
             chapterId: null,
             stationId: null,
-            worldId: world?.spec.id ?? null,
-            title: world?.spec.name ?? "Thế giới mô phỏng",
-            meta: world?.spec.designation ?? "Phòng mô phỏng giả tưởng",
+            worldId: world.spec.id,
+            title: world.spec.name,
+            meta: `${world.spec.designation} · ${world.spec.latin}`,
           };
         }
-        if (data.kind === "planet") {
+        if (kind === "planet") {
           const entry = planets.find((item) => item.spec.id === data.planetId);
           const planetData = propsRef.current.model.planets.find((item) => item.spec.id === data.planetId);
           if (!entry) continue;
@@ -1430,7 +1445,7 @@ export default function SolarSystem({
               : entry.spec.subject,
           };
         }
-        if (data.kind === "chapter") {
+        if (kind === "chapter") {
           const entry = planets.find((item) => item.spec.id === data.planetId);
           const chapter = entry?.satellites.find((item) => item.chapter.id === data.chapterId)?.chapter;
           if (!chapter) continue;
@@ -1443,7 +1458,7 @@ export default function SolarSystem({
             meta: `${chapter.kind === "natural" ? "Vệ tinh tự nhiên" : "Vệ tinh nhân tạo"} · ${chapter.visited}/${chapter.total} trạm`,
           };
         }
-        if (data.kind === "station") {
+        if (kind === "station") {
           const entry = planets.find((item) => item.spec.id === data.planetId);
           const chapter = entry?.satellites.find((item) => item.chapter.id === data.chapterId)?.chapter;
           const station = chapter?.stations.find((item) => item.id === data.stationId);
@@ -1463,7 +1478,9 @@ export default function SolarSystem({
 
     const updateHover = () => {
       const hover = findHover();
-      const key = hover ? `${hover.kind}:${hover.planetId}:${hover.chapterId}:${hover.stationId}` : "";
+      const key = hover
+        ? `${hover.kind}:${hover.planetId}:${hover.chapterId}:${hover.stationId}:${hover.worldId ?? ""}`
+        : "";
       hoverRef.current = hover
         ? { kind: hover.kind, planetId: hover.planetId, chapterId: hover.chapterId }
         : null;
