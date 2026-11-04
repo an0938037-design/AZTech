@@ -8,8 +8,13 @@ import {
   Clock,
   Flame,
   FlaskConical,
+  Gauge,
+  Plus,
   RotateCcw,
+  Search,
+  Sparkles,
   Thermometer,
+  X,
 } from "lucide-react";
 
 /* ==========================================================================
@@ -92,6 +97,86 @@ const STATE_LABEL: Record<ReagentState, string> = {
   metal: "kim loại",
   indicator: "chỉ thị",
 };
+
+interface Preset {
+  id: string;
+  label: string;
+  formula: string;
+  reagents: string[];
+  note: string;
+}
+
+const PRESETS: Preset[] = [
+  {
+    id: "neutral",
+    label: "Trung hoà",
+    formula: "HCl + NaOH",
+    reagents: ["hcl", "naoh"],
+    note: "Trung hoà axit bằng bazơ, toả nhiệt nhẹ.",
+  },
+  {
+    id: "zinc",
+    label: "Kim loại + axit",
+    formula: "Zn + HCl",
+    reagents: ["zn", "hcl"],
+    note: "Kẽm tan, sủi bọt khí H₂.",
+  },
+  {
+    id: "precipitate",
+    label: "Kết tủa xanh",
+    formula: "CuSO₄ + NaOH",
+    reagents: ["cuso4", "naoh"],
+    note: "Tạo kết tủa Cu(OH)₂ màu xanh lam.",
+  },
+  {
+    id: "limestone",
+    label: "Đá vôi + axit",
+    formula: "CaCO₃ + HCl",
+    reagents: ["caco3", "hcl"],
+    note: "Đá vôi tan, sủi bọt khí CO₂.",
+  },
+];
+
+function normalizeText(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[₀-₉]/g, (digit) => String(digit.charCodeAt(0) - 0x2080))
+    .replace(/đ/g, "d")
+    .replace(/Đ/g, "D")
+    .toLowerCase();
+}
+
+interface PhReading {
+  value: number;
+  label: string;
+  tone: "acid" | "neutral" | "base";
+}
+
+function estimatePh(contents: string[]): PhReading {
+  const has = (id: string) => contents.includes(id);
+  const acid = has("hcl") || has("h2so4");
+  const base = has("naoh") || has("koh") || has("ca_oh2");
+
+  let value = 7;
+  if (acid && !base) value = has("h2so4") ? 1.2 : 1.6;
+  else if (base && !acid) value = has("ca_oh2") ? 12.4 : 12.8;
+  else if (has("fecl3")) value = 2.4;
+  else if (has("cucl2")) value = 4.6;
+  else if (has("fecl2")) value = 5.0;
+  else if (has("zncl2")) value = 5.2;
+  else if (has("cuso4")) value = 4.3;
+  else if (has("na2co3")) value = 11.4;
+  else if (has("cao")) value = 12.6;
+
+  if (value < 5.5) {
+    return { value, label: value < 3 ? "AXIT MẠNH" : "AXIT YẾU", tone: "acid" };
+  }
+  if (value > 8.5) {
+    return { value, label: value > 12 ? "BAZƠ MẠNH" : "BAZƠ YẾU", tone: "base" };
+  }
+  return { value, label: "TRUNG TÍNH", tone: "neutral" };
+}
 
 interface Species {
   formula: string;
@@ -825,6 +910,36 @@ function makeSoftTexture(): THREE.Texture {
   return texture;
 }
 
+function makeStreakTexture(): THREE.Texture {
+  const width = 64;
+  const height = 256;
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const context = canvas.getContext("2d");
+  if (context) {
+    const horizontal = context.createLinearGradient(0, 0, width, 0);
+    horizontal.addColorStop(0, "rgba(255,255,255,0)");
+    horizontal.addColorStop(0.45, "rgba(255,255,255,0.95)");
+    horizontal.addColorStop(0.6, "rgba(255,255,255,1)");
+    horizontal.addColorStop(1, "rgba(255,255,255,0)");
+    context.fillStyle = horizontal;
+    context.fillRect(0, 0, width, height);
+
+    context.globalCompositeOperation = "destination-in";
+    const vertical = context.createLinearGradient(0, 0, 0, height);
+    vertical.addColorStop(0, "rgba(255,255,255,0)");
+    vertical.addColorStop(0.18, "rgba(255,255,255,0.9)");
+    vertical.addColorStop(0.82, "rgba(255,255,255,0.9)");
+    vertical.addColorStop(1, "rgba(255,255,255,0)");
+    context.fillStyle = vertical;
+    context.fillRect(0, 0, width, height);
+  }
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.needsUpdate = true;
+  return texture;
+}
+
 function cssColor(raw: string, fallback: number): THREE.Color {
   const value = raw.trim();
   if (!/^#([0-9a-f]{3,8})|^rgba?\(|^hsla?\(/i.test(value)) return new THREE.Color(fallback);
@@ -854,6 +969,7 @@ export default function ReactionLab() {
   const [notice, setNotice] = useState<{ text: string; key: number } | null>(null);
   const [pulse, setPulse] = useState(0);
   const [filterKind, setFilterKind] = useState<ReagentKind | "all">("all");
+  const [query, setQuery] = useState("");
 
   const hostRef = useRef<HTMLDivElement>(null);
   const liquidRef = useRef<THREE.Mesh | null>(null);
@@ -911,6 +1027,24 @@ export default function ReactionLab() {
   );
 
   const contentSet = useMemo(() => new Set(contents), [contents]);
+  const ph = useMemo(() => estimatePh(contents), [contents]);
+
+  const filteredGroups = useMemo(() => {
+    const needle = normalizeText(query.trim());
+    return groups
+      .filter((group) => filterKind === "all" || group.kind === filterKind)
+      .map((group) => ({
+        ...group,
+        items: needle
+          ? group.items.filter(
+              (reagent) =>
+                normalizeText(reagent.formula).includes(needle) ||
+                normalizeText(reagent.name).includes(needle)
+            )
+          : group.items,
+      }))
+      .filter((group) => group.items.length > 0);
+  }, [groups, filterKind, query]);
 
   const notify = (text: string) => {
     noticeKeyRef.current += 1;
@@ -1007,43 +1141,80 @@ export default function ReactionLab() {
     });
   };
 
-  const addReagent = (reagent: Reagent) => {
-    if (contents.includes(reagent.id)) {
-      notify(`${reagent.formula} đã có trong cốc.`);
-      return;
-    }
+  const clearBeakerState = () => {
+    setContents([]);
+    setDone([]);
+    setResult(null);
+    setHeating(false);
+    setPulse(0);
 
     const state = vis.current;
-    if (reagent.state === "dd" || reagent.state === "indicator") {
-      state.fillTarget = clamp(state.fillTarget + 0.055, 0.82, 1.9);
-      if (reagent.tint !== undefined) state.liquidTarget.lerp(new THREE.Color(reagent.tint), 0.42);
-    } else {
-      state.fillTarget = clamp(state.fillTarget + 0.02, 0.82, 1.9);
-      state.cloudyTarget = Math.min(0.3, state.cloudyTarget + 0.035);
+    state.heating = false;
+    state.fillTarget = 0.82;
+    state.cloudyTarget = 0.08;
+    state.liquidTarget.set(WATER_COLOR);
+    state.gas = 0;
+    state.flame = 0;
+    state.smoke = 0;
+    state.heatPulse = 0;
+    state.temp = 25;
+    state.pour = 0;
+    state.precipTarget = 0;
+    if (precipRef.current) precipRef.current.visible = false;
+    setTemperature(25);
+  };
+
+  const pourReagents = (ids: string[], fresh = false) => {
+    if (fresh) clearBeakerState();
+
+    let current = fresh ? [] : [...contents];
+    let currentDone = fresh ? [] : [...done];
+    const results: Reaction[] = [];
+    let lastReagent: Reagent | null = null;
+
+    const state = vis.current;
+    for (const id of ids) {
+      const reagent = REAGENT_MAP.get(id);
+      if (!reagent || current.includes(id)) continue;
+      lastReagent = reagent;
+
+      if (reagent.state === "dd" || reagent.state === "indicator") {
+        state.fillTarget = clamp(state.fillTarget + 0.055, 0.82, 1.9);
+        if (reagent.tint !== undefined) state.liquidTarget.lerp(new THREE.Color(reagent.tint), 0.42);
+      } else {
+        state.fillTarget = clamp(state.fillTarget + 0.02, 0.82, 1.9);
+        state.cloudyTarget = Math.min(0.3, state.cloudyTarget + 0.035);
+      }
+
+      state.pour = 1;
+      state.pourColor.set(reagent.tint ?? reagent.solid ?? 0xe8f0f5);
+
+      const next = resolveChain([...current, id], currentDone, fresh ? false : heating);
+      current = next.contents;
+      currentDone = next.done;
+      results.push(...next.results);
     }
 
-    state.pour = 1;
-    state.pourColor.set(reagent.tint ?? reagent.solid ?? 0xe8f0f5);
+    if (!lastReagent) return;
 
-    const next = resolveChain([...contents, reagent.id], done, heating);
-    setContents(next.contents);
-    setDone(next.done);
+    setContents(current);
+    setDone(currentDone);
 
-    if (next.results.length > 0) {
-      for (const reaction of next.results) applyVisualEffect(reaction.effect);
-      const last = next.results[next.results.length - 1];
-      setResult(reactionToResult(last, next.results.length, next.results));
-      recordReactions(next.results);
+    if (results.length > 0) {
+      for (const reaction of results) applyVisualEffect(reaction.effect);
+      const last = results[results.length - 1];
+      setResult(reactionToResult(last, results.length, results));
+      recordReactions(results);
       setPulse((value) => value + 1);
       notify(
-        next.results.length > 1
-          ? `${next.results.length} phản ứng liên tiếp đã xảy ra.`
+        results.length > 1
+          ? `${results.length} phản ứng liên tiếp đã xảy ra.`
           : `${last.name} đã xảy ra.`
       );
       return;
     }
 
-    const indicator = indicatorResult(next.contents);
+    const indicator = indicatorResult(current);
     if (indicator) {
       setResult(indicator);
       if (indicator.pink) {
@@ -1052,10 +1223,24 @@ export default function ReactionLab() {
       } else if (indicator.acid) {
         state.liquidTarget.set(0xe8f3f8);
       }
+      notify(indicator.name);
       return;
     }
 
-    setResult(observationResult(reagent, next.contents, heating));
+    setResult(observationResult(lastReagent, current, fresh ? false : heating));
+    notify(`${lastReagent.formula} đã được rót vào cốc.`);
+  };
+
+  const addReagent = (reagent: Reagent) => {
+    if (contents.includes(reagent.id)) {
+      notify(`${reagent.formula} đã có trong cốc.`);
+      return;
+    }
+    pourReagents([reagent.id]);
+  };
+
+  const runPreset = (preset: Preset) => {
+    pourReagents(preset.reagents, true);
   };
 
   const toggleHeat = () => {
@@ -1090,26 +1275,7 @@ export default function ReactionLab() {
   };
 
   const reset = () => {
-    setContents([]);
-    setDone([]);
-    setResult(null);
-    setHeating(false);
-    setPulse(0);
-
-    const state = vis.current;
-    state.heating = false;
-    state.fillTarget = 0.82;
-    state.cloudyTarget = 0.08;
-    state.liquidTarget.set(WATER_COLOR);
-    state.gas = 0;
-    state.flame = 0;
-    state.smoke = 0;
-    state.heatPulse = 0;
-    state.temp = 25;
-    state.pour = 0;
-    state.precipTarget = 0;
-    if (precipRef.current) precipRef.current.visible = false;
-    setTemperature(25);
+    clearBeakerState();
     notify("Đã rửa cốc. Sẵn sàng thí nghiệm mới.");
   };
 
@@ -1269,20 +1435,20 @@ export default function ReactionLab() {
     // Bếp điện
     const plateGroup = new THREE.Group();
     const plateMaterial = new THREE.MeshStandardMaterial({
-      color: 0x191c25,
-      metalness: 0.55,
-      roughness: 0.52,
-      envMapIntensity: 0.32,
+      color: isLight ? 0x4a5263 : 0x191c25,
+      metalness: isLight ? 0.42 : 0.55,
+      roughness: isLight ? 0.44 : 0.52,
+      envMapIntensity: 0.42,
     });
     const plate = new THREE.Mesh(new THREE.CylinderGeometry(1.55, 1.62, 0.16, 72), plateMaterial);
     plate.position.y = 0.01;
     plateGroup.add(plate);
 
     const plateTopMaterial = new THREE.MeshStandardMaterial({
-      color: 0x1a1e27,
+      color: isLight ? 0x3b4354 : 0x1a1e27,
       metalness: 0.18,
       roughness: 0.74,
-      envMapIntensity: 0.1,
+      envMapIntensity: 0.14,
       emissive: new THREE.Color(0xff6b2c),
       emissiveIntensity: 0,
     });
@@ -1304,7 +1470,11 @@ export default function ReactionLab() {
     plateRing.position.y = 0.116;
     plateGroup.add(plateRing);
 
-    const knobMaterial = new THREE.MeshStandardMaterial({ color: 0x3b4150, metalness: 0.8, roughness: 0.3 });
+    const knobMaterial = new THREE.MeshStandardMaterial({
+      color: isLight ? 0x6a7486 : 0x3b4150,
+      metalness: 0.8,
+      roughness: 0.3,
+    });
     const knob = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.08, 28), knobMaterial);
     knob.rotation.x = Math.PI / 2;
     knob.position.set(1.05, 0.06, 1.22);
@@ -1317,16 +1487,16 @@ export default function ReactionLab() {
     scene.add(beaker);
 
     const glassMaterial = new THREE.MeshPhysicalMaterial({
-      color: 0xdff3ff,
+      color: 0xd8eefb,
       metalness: 0.04,
-      roughness: 0.055,
+      roughness: 0.045,
       transparent: true,
-      opacity: isLight ? 0.13 : 0.23,
+      opacity: isLight ? 0.24 : 0.23,
       clearcoat: 1,
-      clearcoatRoughness: 0.055,
+      clearcoatRoughness: 0.045,
       side: THREE.DoubleSide,
       depthWrite: false,
-      envMapIntensity: isLight ? 0.75 : 0.7,
+      envMapIntensity: isLight ? 1.05 : 0.7,
     });
 
     const wall = new THREE.Mesh(new THREE.CylinderGeometry(1.22, 1.15, 2.2, 96, 1, true), glassMaterial);
@@ -1335,8 +1505,8 @@ export default function ReactionLab() {
     beaker.add(wall);
 
     const bottomMaterial = glassMaterial.clone();
-    bottomMaterial.opacity = isLight ? 0.12 : 0.1;
-    bottomMaterial.envMapIntensity = isLight ? 0.4 : 0.2;
+    bottomMaterial.opacity = isLight ? 0.2 : 0.1;
+    bottomMaterial.envMapIntensity = isLight ? 0.55 : 0.2;
     bottomMaterial.clearcoat = 0.15;
     bottomMaterial.clearcoatRoughness = 0.5;
     bottomMaterial.roughness = 0.32;
@@ -1350,7 +1520,7 @@ export default function ReactionLab() {
       metalness: 0.12,
       roughness: 0.08,
       transparent: true,
-      opacity: 0.58,
+      opacity: isLight ? 0.88 : 0.58,
       clearcoat: 1,
       depthWrite: false,
     });
@@ -1360,12 +1530,52 @@ export default function ReactionLab() {
     rim.renderOrder = 9;
     beaker.add(rim);
 
-    const tickMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.36 });
-    for (let index = 0; index < 5; index += 1) {
-      const tick = new THREE.Mesh(new THREE.BoxGeometry(index % 2 === 0 ? 0.2 : 0.12, 0.008, 0.008), tickMaterial);
-      tick.position.set(-0.56, 0.52 + index * 0.35, 1.14);
+    const baseRingMaterial = new THREE.MeshBasicMaterial({
+      color: isLight ? 0x7c93a8 : 0x9db4cc,
+      transparent: true,
+      opacity: isLight ? 0.46 : 0.22,
+      depthWrite: false,
+    });
+    const baseRing = new THREE.Mesh(new THREE.TorusGeometry(1.16, 0.016, 8, 80), baseRingMaterial);
+    baseRing.rotation.x = Math.PI / 2;
+    baseRing.position.y = 0.18;
+    baseRing.renderOrder = 7;
+    beaker.add(baseRing);
+
+    const tickMaterial = new THREE.MeshBasicMaterial({
+      color: isLight ? 0x4f6579 : 0xffffff,
+      transparent: true,
+      opacity: isLight ? 0.56 : 0.38,
+    });
+    for (let index = 0; index < 9; index += 1) {
+      const long = index % 2 === 0;
+      const tick = new THREE.Mesh(new THREE.BoxGeometry(long ? 0.22 : 0.13, 0.007, 0.008), tickMaterial);
+      tick.position.set(-0.6 + (long ? 0 : 0.045), 0.38 + index * 0.225, 1.13);
+      tick.renderOrder = 9;
       beaker.add(tick);
     }
+
+    const streakTexture = makeStreakTexture();
+    const streakMaterial = new THREE.MeshBasicMaterial({
+      map: streakTexture,
+      color: isLight ? 0xa9cfe4 : 0xc9ecff,
+      transparent: true,
+      opacity: isLight ? 0.55 : 0.34,
+      depthWrite: false,
+      blending: isLight ? THREE.NormalBlending : THREE.AdditiveBlending,
+      side: THREE.DoubleSide,
+    });
+    const streak = new THREE.Mesh(new THREE.PlaneGeometry(0.34, 1.75), streakMaterial);
+    streak.position.set(-0.58, 1.35, 1.14);
+    streak.renderOrder = 10;
+    beaker.add(streak);
+
+    const streak2Material = streakMaterial.clone();
+    streak2Material.opacity = isLight ? 0.32 : 0.18;
+    const streak2 = new THREE.Mesh(new THREE.PlaneGeometry(0.14, 1.95), streak2Material);
+    streak2.position.set(0.72, 1.3, 1.03);
+    streak2.renderOrder = 10;
+    beaker.add(streak2);
 
     const liquidMaterial = new THREE.MeshPhysicalMaterial({
       color: WATER_COLOR,
@@ -1734,7 +1944,10 @@ export default function ReactionLab() {
       const width = Math.max(1, host.clientWidth);
       const height = Math.max(1, host.clientHeight);
       renderer.setSize(width, height, false);
-      camera.aspect = width / height;
+      const aspect = width / height;
+      camera.aspect = aspect;
+      // Khung hẹp (tablet/mobile) cần góc nhìn rộng hơn để không cắt mất cốc.
+      camera.fov = clamp(40 + Math.max(0, 0.95 - aspect) * 34, 40, 56);
       camera.updateProjectionMatrix();
     };
 
@@ -1916,21 +2129,42 @@ export default function ReactionLab() {
           </span>
         </header>
 
+        <div className="rxn-search">
+          <Search size={12} aria-hidden="true" />
+          <input
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Tìm chất hoặc công thức…"
+            aria-label="Tìm chất trong kệ"
+          />
+          {query ? (
+            <button type="button" onClick={() => setQuery("")} aria-label="Xoá từ khoá tìm kiếm">
+              <X size={11} />
+            </button>
+          ) : null}
+        </div>
+
         <div className="rxn-filter" role="group" aria-label="Lọc chất theo nhóm">
           <button
             type="button"
             className={filterKind === "all" ? "is-active" : ""}
+            aria-pressed={filterKind === "all"}
             onClick={() => setFilterKind("all")}
           >
             TẤT CẢ
+            <b>{REAGENTS.length}</b>
           </button>
           {groups.map((group) => (
             <button
               key={group.kind}
               type="button"
+              data-kind={group.kind}
               className={filterKind === group.kind ? "is-active" : ""}
+              aria-pressed={filterKind === group.kind}
               onClick={() => setFilterKind(group.kind)}
             >
+              <i />
               {KIND_SHORT[group.kind]}
             </button>
           ))}
@@ -1958,11 +2192,34 @@ export default function ReactionLab() {
             </div>
           </div>
 
-          {groups.map((group) => (
+          <div className="rxn-presets">
+            <div className="rxn-mini-title is-preset">
+              <Sparkles size={10} />
+              THÍ NGHIỆM NHANH
+            </div>
+            <div className="rxn-preset-grid">
+              {PRESETS.map((preset) => (
+                <button
+                  key={preset.id}
+                  type="button"
+                  className="rxn-preset"
+                  onClick={() => runPreset(preset)}
+                  title={preset.note}
+                >
+                  <b>{preset.formula}</b>
+                  <span>{preset.label}</span>
+                  <Plus size={10} />
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {filteredGroups.map((group) => (
             <div className="rxn-group" key={group.kind} data-kind={group.kind}>
               <div className="rxn-mini-title">
+                <i className="rxn-group-dot" />
                 {group.label}
-                <span>{group.items.length}</span>
+                <b>{group.items.length}</b>
               </div>
               <div className="rxn-reagents">
                 {group.items.map((reagent) => {
@@ -1971,6 +2228,7 @@ export default function ReactionLab() {
                     <button
                       key={reagent.id}
                       type="button"
+                      data-kind={reagent.kind}
                       className={`rxn-reagent ${inBeaker ? "is-in" : ""}`}
                       onClick={() => addReagent(reagent)}
                       aria-pressed={inBeaker}
@@ -1978,13 +2236,31 @@ export default function ReactionLab() {
                     >
                       <span className="rxn-reagent-formula">{reagent.formula}</span>
                       <span className="rxn-reagent-name">{reagent.name}</span>
-                      <span className="rxn-reagent-tag">{inBeaker ? "trong cốc" : STATE_LABEL[reagent.state]}</span>
+                      <span className="rxn-reagent-tag">
+                        {inBeaker ? "TRONG CỐC" : STATE_LABEL[reagent.state]}
+                      </span>
                     </button>
                   );
                 })}
               </div>
             </div>
           ))}
+
+          {filteredGroups.length === 0 && (
+            <div className="rxn-no-match">
+              <Search size={18} />
+              <span>Không tìm thấy chất phù hợp.</span>
+              <button
+                type="button"
+                onClick={() => {
+                  setQuery("");
+                  setFilterKind("all");
+                }}
+              >
+                XOÁ BỘ LỌC
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="rxn-history">
@@ -2022,10 +2298,6 @@ export default function ReactionLab() {
             <div className={`rxn-status ${statusClass}`}>
               <i />
               {statusText}
-              <span className="rxn-temp">
-                <Thermometer size={11} />
-                {temperature}°C
-              </span>
             </div>
             <div className="rxn-tools">
               <button
@@ -2044,8 +2316,38 @@ export default function ReactionLab() {
             </div>
           </div>
 
+          <div className="rxn-meters" aria-label="Thiết bị đo của phòng lab">
+            <div className="rxn-meter is-ph" data-tone={ph.tone}>
+              <span className="rxn-meter-head">
+                <Gauge size={11} />
+                pH
+              </span>
+              <strong>{ph.value.toFixed(1)}</strong>
+              <div className="rxn-ph-scale" aria-hidden="true">
+                <i style={{ left: `${(ph.value / 14) * 100}%` }} />
+              </div>
+              <span className="rxn-meter-label">{ph.label}</span>
+            </div>
+            <div className="rxn-meter is-temp" data-hot={temperature >= 55 ? "true" : "false"}>
+              <span className="rxn-meter-head">
+                <Thermometer size={11} />
+                NHIỆT ĐỘ
+              </span>
+              <strong>
+                {temperature}
+                <small>°C</small>
+              </strong>
+              <div className="rxn-temp-bar" aria-hidden="true">
+                <i style={{ width: `${clamp(((temperature - 20) / 80) * 100, 3, 100)}%` }} />
+              </div>
+              <span className="rxn-meter-label">
+                {temperature >= 80 ? "RẤT NÓNG" : temperature >= 45 ? "ĐANG NÓNG" : "PHÒNG"}
+              </span>
+            </div>
+          </div>
+
           <div className="rxn-overlay rxn-overlay-bottom">
-            <span className="rxn-hint">NHẤN CHẤT ĐỂ RÓT VÀO CỐC · KÉO ĐỂ XOAY</span>
+            <span className="rxn-hint">NHẤN CHẤT ĐỂ RÓT · KÉO ĐỂ XOAY · CUỘN ĐỂ ZOOM</span>
             {notice && (
               <span className="rxn-notice" key={notice.key}>
                 {notice.text}
@@ -2106,6 +2408,11 @@ export default function ReactionLab() {
                   Thêm axit, bazơ, muối hoặc kim loại vào cốc. Chất tạo thành ở lại trong cốc và có thể
                   tiếp tục phản ứng; bấm ĐUN NÓNG để mở khoá phản ứng nhiệt phân.
                 </p>
+                <div className="rxn-idle-tips">
+                  <span>01 · CHỌN CHẤT</span>
+                  <span>02 · QUAN SÁT</span>
+                  <span>03 · ĐUN NÓNG</span>
+                </div>
               </div>
             </div>
           )}
