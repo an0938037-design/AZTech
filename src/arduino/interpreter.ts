@@ -16,7 +16,11 @@ interface SerialValue {
   __kind: "serial";
 }
 
-export type Value = number | string | boolean | null | Value[] | ServoValue | SerialValue;
+interface LcdValue {
+  __kind: "lcd";
+}
+
+export type Value = number | string | boolean | null | Value[] | ServoValue | SerialValue | LcdValue;
 
 interface Binding {
   value: Value;
@@ -87,6 +91,10 @@ function isSerial(value: Value): value is SerialValue {
   return typeof value === "object" && value !== null && !Array.isArray(value) && (value as SerialValue).__kind === "serial";
 }
 
+function isLcd(value: Value): value is LcdValue {
+  return typeof value === "object" && value !== null && !Array.isArray(value) && (value as LcdValue).__kind === "lcd";
+}
+
 function toNumber(value: Value): number {
   if (typeof value === "number") return Number.isFinite(value) ? value : 0;
   if (typeof value === "boolean") return value ? 1 : 0;
@@ -128,11 +136,11 @@ function toText(value: Value): string {
       .join("")
       .replace(/\0+$/, "");
   }
-  return isServo(value) ? "[Servo]" : "";
+  return isServo(value) ? "[Servo]" : isLcd(value) ? "[LCD]" : "";
 }
 
 function coerce(value: Value, type: string): Value {
-  if (Array.isArray(value) || isServo(value) || isSerial(value)) return value;
+  if (Array.isArray(value) || isServo(value) || isSerial(value) || isLcd(value)) return value;
   switch (type) {
     case "any":
       return value;
@@ -404,9 +412,23 @@ export class Interpreter {
 
   private *execDecl(stmt: Extract<Stmt, { type: "vardecl" }>): Exec {
     for (const item of stmt.items) {
-      let value: Value = stmt.declType === "Servo" ? { __kind: "servo", pin: null, angle: 90 } : 0;
+      let value: Value = 0;
+      if (stmt.declType === "Servo") value = { __kind: "servo", pin: null, angle: 90 };
+      else if (stmt.declType === "LiquidCrystal" || stmt.declType === "LiquidCrystal_I2C") {
+        value = { __kind: "lcd" };
+      }
 
       if (item.init) value = yield* this.evalExpr(item.init);
+
+      if (item.ctorArgs) {
+        const args: Value[] = [];
+        for (const arg of item.ctorArgs) args.push(yield* this.evalExpr(arg));
+        if (stmt.declType === "Servo" && isServo(value) && args.length > 0) {
+          const pin = this.pinOf(args[0], item.line, "Servo");
+          value.pin = pin;
+          this.board.attachServo(pin);
+        }
+      }
 
       if (item.dims.length > 1) {
         throw new SketchError("Chỉ hỗ trợ mảng một chiều trong không gian Arduino.", item.line);
@@ -874,8 +896,12 @@ export class Interpreter {
         return 1;
       }
 
-      case "pulseIn":
-        throw new SketchError("pulseIn() cần phần cứng thật nên chưa được mô phỏng.", line);
+      case "pulseIn": {
+        const pin = this.pinOf(yield* this.arg(args, 0, 0), line, "pulseIn");
+        const state = toNumber(yield* this.arg(args, 1, 1));
+        const timeout = args[2] ? toNumber(yield* this.evalExpr(args[2])) : 1_000_000;
+        return this.board.pulseIn(pin, state, timeout);
+      }
 
       case "attachInterrupt":
       case "detachInterrupt":
@@ -945,6 +971,62 @@ export class Interpreter {
           return 0;
         default:
           throw new SketchError(`Servo.${method}() chưa được hỗ trợ.`, line);
+      }
+    }
+
+    if (isLcd(object)) {
+      switch (method) {
+        case "init":
+        case "begin":
+          this.board.lcdDisplay(true);
+          return 0;
+        case "clear":
+        case "cls":
+          this.board.lcdClear();
+          return 0;
+        case "home":
+          this.board.lcdHome();
+          return 0;
+        case "setCursor": {
+          const col = toNumber(yield* this.arg(args, 0, 0));
+          const row = toNumber(yield* this.arg(args, 1, 0));
+          this.board.lcdSetCursor(col, row);
+          return 0;
+        }
+        case "print":
+        case "println": {
+          const value = yield* this.arg(args, 0, "");
+          const text = toText(value);
+          this.board.lcdPrint(method === "println" ? `${text}\n` : text);
+          return 0;
+        }
+        case "write": {
+          const value = yield* this.arg(args, 0, 0);
+          this.board.lcdPrint(
+            typeof value === "number" ? String.fromCharCode(Math.trunc(value)) : toText(value)
+          );
+          return 0;
+        }
+        case "backlight":
+          this.board.lcdBacklight(true);
+          return 0;
+        case "noBacklight":
+          this.board.lcdBacklight(false);
+          return 0;
+        case "display":
+          this.board.lcdDisplay(true);
+          return 0;
+        case "noDisplay":
+          this.board.lcdDisplay(false);
+          return 0;
+        case "blink":
+        case "noBlink":
+        case "cursor":
+        case "noCursor":
+        case "createChar":
+          return 0;
+        default:
+          throw new SketchError(`LCD.${method}() chưa được hỗ trợ.`, line);
       }
     }
 

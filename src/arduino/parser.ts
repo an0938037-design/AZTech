@@ -21,6 +21,7 @@ export interface DeclItem {
   name: string;
   dims: Array<Expr | null>;
   init: Expr | null;
+  ctorArgs: Expr[] | null;
   line: number;
 }
 
@@ -74,6 +75,8 @@ const TYPE_WORDS = new Set([
   "volatile",
   "String",
   "Servo",
+  "LiquidCrystal_I2C",
+  "LiquidCrystal",
   "size_t",
   "uint8_t",
   "uint16_t",
@@ -111,6 +114,8 @@ function canonicalType(words: string[]): string {
     (word) => !["const", "static", "volatile", "signed", "unsigned"].includes(word)
   );
   if (clean.includes("String")) return "String";
+  if (clean.includes("LiquidCrystal_I2C")) return "LiquidCrystal_I2C";
+  if (clean.includes("LiquidCrystal")) return "LiquidCrystal";
   if (clean.includes("Servo")) return "Servo";
   if (clean.includes("void")) return "void";
   if (clean.includes("float") || clean.includes("double")) return "float";
@@ -149,7 +154,9 @@ export class Parser {
       }
 
       const nameToken = this.peek();
-      if (this.peek(1).value === "(") {
+      const constructorType =
+        type === "Servo" || type === "LiquidCrystal" || type === "LiquidCrystal_I2C";
+      if (this.peek(1).value === "(" && !constructorType) {
         this.advance(); // tên hàm
         this.parseFunction(type, nameToken);
         continue;
@@ -250,12 +257,25 @@ export class Parser {
       }
 
       let init: Expr | null = null;
+      let ctorArgs: Expr[] | null = null;
       if (this.match("=")) {
         if (this.check("{")) init = this.parseInitializerList();
         else init = this.parseAssignment();
+      } else if (
+        this.check("(") &&
+        (declType === "Servo" || declType === "LiquidCrystal" || declType === "LiquidCrystal_I2C")
+      ) {
+        this.advance();
+        ctorArgs = [];
+        if (!this.check(")")) {
+          do {
+            ctorArgs.push(this.parseAssignment());
+          } while (this.match(","));
+        }
+        this.expect(")");
       }
 
-      items.push({ name: name.value, dims, init, line: name.line });
+      items.push({ name: name.value, dims, init, ctorArgs, line: name.line });
     } while (this.match(","));
 
     this.expect(";", `Thiếu “;” sau khai báo “${items[0]?.name ?? ""}”.`);

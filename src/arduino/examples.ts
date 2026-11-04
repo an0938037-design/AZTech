@@ -92,6 +92,200 @@ void loop() {
 `,
   },
   {
+    id: "light",
+    title: "Đèn tự động theo ánh sáng",
+    summary: "Quang trở A1 đo ánh sáng; trời càng tối LED PWM D9 càng sáng.",
+    level: "Cơ bản",
+    pins: "A1 → D9",
+    code: String.raw`const int LDR = A1;
+const int LED = 9;
+
+void setup() {
+  pinMode(LED, OUTPUT);
+  Serial.begin(9600);
+}
+
+void loop() {
+  int light = analogRead(LDR);                      // 0..1023
+  int brightness = map(light, 0, 1023, 255, 0);     // tối → sáng
+  analogWrite(LED, brightness);
+
+  Serial.print("Ánh sáng: ");
+  Serial.print(light);
+  Serial.print("  →  PWM: ");
+  Serial.println(brightness);
+  delay(200);
+}
+`,
+  },
+  {
+    id: "temperature",
+    title: "Đo nhiệt độ TMP36",
+    summary: "Đọc cảm biến nhiệt độ A2, quy đổi điện áp sang °C và in Serial.",
+    level: "Cơ bản",
+    pins: "A2",
+    code: String.raw`const int TMP36 = A2;
+
+void setup() {
+  Serial.begin(9600);
+}
+
+void loop() {
+  int raw = analogRead(TMP36);
+
+  // TMP36: 0.5V ở 0°C, 10mV cho mỗi °C
+  float voltage = raw * 5.0 / 1023.0;
+  float celsius = (voltage - 0.5) * 100.0;
+
+  Serial.print("Nhiệt độ: ");
+  Serial.print(celsius);
+  Serial.println(" °C");
+
+  delay(500);
+}
+`,
+  },
+  {
+    id: "rgb",
+    title: "RGB LED đổi màu",
+    summary: "Pha ba kênh PWM D3 – D5 – D6 để tạo các màu cơ bản.",
+    level: "Trung bình",
+    pins: "D3, D5, D6",
+    code: String.raw`const int RED = 3;
+const int GREEN = 5;
+const int BLUE = 6;
+
+void setup() {
+  pinMode(RED, OUTPUT);
+  pinMode(GREEN, OUTPUT);
+  pinMode(BLUE, OUTPUT);
+  Serial.begin(9600);
+}
+
+void setColor(int r, int g, int b) {
+  analogWrite(RED, r);
+  analogWrite(GREEN, g);
+  analogWrite(BLUE, b);
+}
+
+void loop() {
+  setColor(255, 0, 0);
+  Serial.println("Đỏ");
+  delay(700);
+
+  setColor(0, 255, 0);
+  Serial.println("Lá");
+  delay(700);
+
+  setColor(0, 0, 255);
+  Serial.println("Lam");
+  delay(700);
+
+  setColor(255, 255, 0);
+  Serial.println("Vàng");
+  delay(700);
+
+  setColor(0, 255, 255);
+  Serial.println("Ngọc");
+  delay(700);
+
+  setColor(255, 0, 255);
+  Serial.println("Tím");
+  delay(700);
+}
+`,
+  },
+  {
+    id: "ultrasonic",
+    title: "Đo khoảng cách siêu âm",
+    summary: "HC-SR04 ở TRIG D4 / ECHO A3; pulseIn() trả thời gian sóng dội về.",
+    level: "Trung bình",
+    pins: "D4 → A3",
+    code: String.raw`const int TRIG = 4;
+const int ECHO = A3;
+
+void setup() {
+  pinMode(TRIG, OUTPUT);
+  pinMode(ECHO, INPUT);
+  Serial.begin(9600);
+}
+
+void loop() {
+  digitalWrite(TRIG, LOW);
+  delayMicroseconds(2);
+  digitalWrite(TRIG, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(TRIG, LOW);
+
+  // Thời gian sóng đi-về (µs); chia 58 ra centimet
+  long duration = pulseIn(ECHO, HIGH, 30000);
+  long distance = duration / 58;
+
+  Serial.print("Khoảng cách: ");
+  Serial.print(distance);
+  Serial.println(" cm");
+
+  delay(400);
+}
+`,
+  },
+  {
+    id: "pir",
+    title: "Cảm biến chuyển động PIR",
+    summary: "PIR ở D7 phát hiện người đi qua và bật LED D13.",
+    level: "Cơ bản",
+    pins: "D7 → D13",
+    code: String.raw`const int PIR = 7;
+const int LED = 13;
+
+void setup() {
+  pinMode(PIR, INPUT);
+  pinMode(LED, OUTPUT);
+  Serial.begin(9600);
+  Serial.println("Cảm biến chuyển động sẵn sàng");
+}
+
+void loop() {
+  int motion = digitalRead(PIR);
+  digitalWrite(LED, motion ? HIGH : LOW);
+
+  if (motion) {
+    Serial.println("Phát hiện chuyển động!");
+    delay(300);
+  }
+}
+`,
+  },
+  {
+    id: "lcd",
+    title: "LCD 16×2 I2C",
+    summary: "Hiển thị hai dòng chữ trên LCD I2C bằng thư viện LiquidCrystal_I2C.",
+    level: "Trung bình",
+    pins: "I2C · A4/A5",
+    code: String.raw`#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+
+void setup() {
+  lcd.init();
+  lcd.backlight();
+
+  lcd.setCursor(0, 0);
+  lcd.print("AZTeach Arduino");
+  lcd.setCursor(0, 1);
+  lcd.print("Xin chao!");
+
+  Serial.begin(9600);
+  Serial.println("LCD 16x2 đã sẵn sàng");
+}
+
+void loop() {
+  delay(1000);
+}
+`,
+  },
+  {
     id: "traffic",
     title: "Đèn giao thông",
     summary: "Ba LED đỏ – vàng – lá chạy theo chu trình có thời gian chờ.",

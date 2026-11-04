@@ -5,11 +5,17 @@ import {
   CircuitBoard,
   Cpu,
   Lightbulb,
+  Monitor,
+  Palette,
   Play,
+  Radar,
   RotateCcw,
+  Ruler,
   Send,
   Square,
+  Sun,
   Terminal,
+  Thermometer,
   Trash,
   Volume2,
   VolumeX,
@@ -39,6 +45,10 @@ interface SavedState {
   exampleId: string;
   muted: boolean;
   pot: number;
+  light: number;
+  temperature: number;
+  distance: number;
+  motion: boolean;
 }
 
 function loadSaved(): SavedState {
@@ -56,13 +66,31 @@ function loadSaved(): SavedState {
           exampleId,
           muted: Boolean(parsed.muted),
           pot: typeof parsed.pot === "number" ? Math.max(0, Math.min(1023, parsed.pot)) : 512,
+          light:
+            typeof parsed.light === "number" ? Math.max(0, Math.min(1023, parsed.light)) : 512,
+          temperature:
+            typeof parsed.temperature === "number"
+              ? Math.max(-10, Math.min(60, parsed.temperature))
+              : 25,
+          distance:
+            typeof parsed.distance === "number" ? Math.max(2, Math.min(200, parsed.distance)) : 30,
+          motion: Boolean(parsed.motion),
         };
       }
     }
   } catch {
     // ignore
   }
-  return { code: DEFAULT_CODE, exampleId: "blink", muted: false, pot: 512 };
+  return {
+    code: DEFAULT_CODE,
+    exampleId: "blink",
+    muted: false,
+    pot: 512,
+    light: 512,
+    temperature: 25,
+    distance: 30,
+    motion: false,
+  };
 }
 
 interface AudioRig {
@@ -88,6 +116,10 @@ export default function ArduinoStudio() {
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<{ message: string; line: number } | null>(null);
   const [pot, setPot] = useState(saved.pot);
+  const [light, setLight] = useState(saved.light);
+  const [temperature, setTemperature] = useState(saved.temperature);
+  const [distance, setDistance] = useState(saved.distance);
+  const [motion, setMotion] = useState(saved.motion);
   const [pressed, setPressed] = useState(false);
   const [serialInput, setSerialInput] = useState("");
   const [autoScroll, setAutoScroll] = useState(true);
@@ -103,6 +135,10 @@ export default function ArduinoStudio() {
   const resumeAtRef = useRef(0);
   const lastPublishRef = useRef(0);
   const potRef = useRef(saved.pot);
+  const lightRef = useRef(saved.light);
+  const temperatureRef = useRef(saved.temperature);
+  const distanceRef = useRef(saved.distance);
+  const motionRef = useRef(saved.motion);
   const pressedRef = useRef(false);
   const audioRef = useRef<AudioRig | null>(null);
 
@@ -252,6 +288,10 @@ export default function ArduinoStudio() {
     const board = new Board(clock);
     board.setPot(potRef.current);
     board.setButton(pressedRef.current);
+    board.setLight(lightRef.current);
+    board.setTemperature(temperatureRef.current);
+    board.setDistance(distanceRef.current);
+    board.setMotion(motionRef.current);
     boardRef.current = board;
     publish(true);
 
@@ -286,6 +326,10 @@ export default function ArduinoStudio() {
         board.clearSerial();
         board.setPot(potRef.current);
         board.setButton(pressedRef.current);
+        board.setLight(lightRef.current);
+        board.setTemperature(temperatureRef.current);
+        board.setDistance(distanceRef.current);
+        board.setMotion(motionRef.current);
         setSnapshot(board.snapshot());
       }
       window.requestAnimationFrame(() => {
@@ -319,13 +363,25 @@ export default function ArduinoStudio() {
   useEffect(() => {
     const timer = window.setTimeout(() => {
       try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify({ code, exampleId, muted, pot }));
+        localStorage.setItem(
+          STORAGE_KEY,
+          JSON.stringify({
+            code,
+            exampleId,
+            muted,
+            pot,
+            light,
+            temperature,
+            distance,
+            motion,
+          })
+        );
       } catch {
         // ignore
       }
     }, 350);
     return () => window.clearTimeout(timer);
-  }, [code, exampleId, muted, pot]);
+  }, [code, exampleId, muted, pot, light, temperature, distance, motion]);
 
   /* Âm thanh còi theo trạng thái bo mạch. */
   useEffect(() => {
@@ -432,6 +488,35 @@ export default function ArduinoStudio() {
     publish(true);
   };
 
+  const onLightChange = (value: number) => {
+    setLight(value);
+    lightRef.current = value;
+    boardRef.current?.setLight(value);
+    publish(true);
+  };
+
+  const onTemperatureChange = (value: number) => {
+    setTemperature(value);
+    temperatureRef.current = value;
+    boardRef.current?.setTemperature(value);
+    publish(true);
+  };
+
+  const onDistanceChange = (value: number) => {
+    setDistance(value);
+    distanceRef.current = value;
+    boardRef.current?.setDistance(value);
+    publish(true);
+  };
+
+  const toggleMotion = () => {
+    const next = !motionRef.current;
+    motionRef.current = next;
+    setMotion(next);
+    boardRef.current?.setMotion(next);
+    publish(true);
+  };
+
   const sendSerial = (event: FormEvent) => {
     event.preventDefault();
     if (!serialInput) return;
@@ -447,6 +532,9 @@ export default function ArduinoStudio() {
 
   const runState = running ? "running" : error ? "error" : "idle";
   const potLevel = Math.round((snapshot.pot / 1023) * 100);
+  const lightPercent = Math.round((snapshot.sensors.light / 1023) * 100);
+  const rgbOn = snapshot.rgb.r + snapshot.rgb.g + snapshot.rgb.b > 0;
+  const rgbColor = `rgb(${snapshot.rgb.r}, ${snapshot.rgb.g}, ${snapshot.rgb.b})`;
 
   return (
     <div className="arduino-studio">
@@ -455,8 +543,8 @@ export default function ArduinoStudio() {
           <span className="kicker">KHÔNG GIAN PHẦN CỨNG</span>
           <h1>Arduino ngay trên trình duyệt</h1>
           <p>
-            Viết sketch, bấm chạy và xem bo mạch ảo phản hồi tức thì. Không cần cài IDE,
-            không cần mua board — mọi thứ chạy offline trong tab này.
+            Viết sketch, bấm chạy và xem bo mạch ảo phản hồi tức thì — LED, cảm biến, servo và
+            LCD. Không cần cài IDE, không cần mua board — mọi thứ chạy offline trong tab này.
           </p>
         </div>
 
@@ -578,7 +666,40 @@ export default function ArduinoStudio() {
             <BoardView snapshot={snapshot} />
 
             <div className="arduino-wiring">
-              D13 đỏ · D12 vàng · D11 lá · D9 PWM · D2 nút · A0 biến trở · D8 còi · D10 servo
+              D13 đỏ · D12 vàng · D11 lá · D9 PWM · D3/D5/D6 RGB · D2 nút · D7 PIR ·
+              D4/A3 siêu âm · A0 biến trở · A1 quang trở · A2 nhiệt độ · D8 còi ·
+              D10 servo · LCD I2C A4/A5
+            </div>
+
+            <div className="arduino-lcd">
+              <div className="arduino-lcd-head">
+                <span>
+                  <Monitor size={12} /> LCD 16×2 · I2C
+                </span>
+                <span>
+                  {snapshot.lcd.enabled
+                    ? snapshot.lcd.backlight
+                      ? "đèn nền"
+                      : "tối"
+                    : "tắt"}
+                </span>
+              </div>
+              <div
+                className={[
+                  "arduino-lcd-screen",
+                  snapshot.lcd.enabled ? "" : "is-off",
+                  snapshot.lcd.backlight ? "" : "is-dim",
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
+                aria-label="Màn hình LCD 16 cột 2 dòng"
+              >
+                {snapshot.lcd.lines.map((line, index) => (
+                  <div className="arduino-lcd-line" key={index}>
+                    {line || "\u00a0"}
+                  </div>
+                ))}
+              </div>
             </div>
 
             <div className="arduino-parts">
@@ -635,6 +756,28 @@ export default function ArduinoStudio() {
                     </span>
                   </div>
                 </div>
+
+                <div className={`arduino-part arduino-rgb ${rgbOn ? "is-on" : ""}`}>
+                  <span className="arduino-part-name">
+                    <Palette size={12} /> RGB LED · D3 / D5 / D6
+                  </span>
+                  <div className="arduino-rgb-body">
+                    <span
+                      className="arduino-rgb-orb"
+                      aria-hidden="true"
+                      style={{
+                        background: rgbColor,
+                        boxShadow: rgbOn ? `0 0 22px ${rgbColor}` : "none",
+                      }}
+                    />
+                    <div className="arduino-rgb-values">
+                      <span>R {snapshot.rgb.r}</span>
+                      <span>G {snapshot.rgb.g}</span>
+                      <span>B {snapshot.rgb.b}</span>
+                    </div>
+                  </div>
+                  <span className="arduino-part-value">{rgbOn ? rgbColor : "tắt"}</span>
+                </div>
               </div>
 
               <div className="arduino-part-group">
@@ -679,7 +822,76 @@ export default function ArduinoStudio() {
                     {snapshot.pot} · {potLevel}%
                   </span>
                 </label>
+              </div>
+            </div>
 
+            <div className="arduino-sensors">
+              <span className="arduino-part-title">CẢM BIẾN MÔ PHỎNG · KÉO ĐỂ THAY ĐỔI</span>
+              <div className="arduino-sensor-grid">
+                <label className="arduino-sensor">
+                  <span className="arduino-sensor-head">
+                    <Sun size={12} /> QUANG TRỞ · A1
+                    <em>
+                      {snapshot.sensors.light} · {lightPercent}%
+                    </em>
+                  </span>
+                  <input
+                    type="range"
+                    min={0}
+                    max={1023}
+                    value={light}
+                    onChange={(event) => onLightChange(Number(event.target.value))}
+                    aria-label="Cường độ ánh sáng ở chân A1"
+                  />
+                </label>
+
+                <label className="arduino-sensor">
+                  <span className="arduino-sensor-head">
+                    <Thermometer size={12} /> TMP36 · A2
+                    <em>{snapshot.sensors.temperature.toFixed(1)}°C</em>
+                  </span>
+                  <input
+                    type="range"
+                    min={-10}
+                    max={60}
+                    step={0.5}
+                    value={temperature}
+                    onChange={(event) => onTemperatureChange(Number(event.target.value))}
+                    aria-label="Nhiệt độ cảm biến TMP36 ở chân A2"
+                  />
+                </label>
+
+                <label className="arduino-sensor">
+                  <span className="arduino-sensor-head">
+                    <Ruler size={12} /> SIÊU ÂM · D4/A3
+                    <em>{snapshot.sensors.distance} cm</em>
+                  </span>
+                  <input
+                    type="range"
+                    min={2}
+                    max={200}
+                    value={distance}
+                    onChange={(event) => onDistanceChange(Number(event.target.value))}
+                    aria-label="Khoảng cách vật trước cảm biến siêu âm"
+                  />
+                </label>
+
+                <div className={`arduino-sensor arduino-sensor-switch ${motion ? "is-on" : ""}`}>
+                  <span className="arduino-sensor-head">
+                    <Radar size={12} /> PIR · D7
+                    <em>{motion ? "có chuyển động" : "yên tĩnh"}</em>
+                  </span>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={motion}
+                    aria-label="Bật tắt chuyển động trước cảm biến PIR"
+                    className={`arduino-switch ${motion ? "is-on" : ""}`}
+                    onClick={toggleMotion}
+                  >
+                    <span />
+                  </button>
+                </div>
               </div>
             </div>
           </section>
@@ -775,8 +987,9 @@ export default function ArduinoStudio() {
       </section>
 
       <p className="arduino-footnote">
-        Bo mạch ảo mô phỏng Arduino Uno ở mức logic: chân số, PWM, Serial, còi và servo. Các
-        sketch dùng thư viện phần cứng đặc thù (LCD, cảm biến nhiệt, thẻ SD…) cần phần cứng thật.
+        Bo mạch ảo mô phỏng Arduino Uno ở mức logic: chân số, PWM, Serial, còi, servo, RGB,
+        cảm biến và LCD I2C. Các thư viện phần cứng khác (WiFi, thẻ SD, màn hình SPI…) vẫn cần
+        phần cứng thật.
       </p>
     </div>
   );

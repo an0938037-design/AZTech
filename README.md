@@ -174,14 +174,15 @@ Hỗ trợ PDF, DOCX, PPTX, TXT/MD. Phần đọc PDF/DOCX/PPTX được **lazy-
 
 Không cần IDE, không cần board thật: sketch được **thông dịch ngay trong tab** bằng TypeScript thuần, chạy offline và không gửi mã nguồn lên server.
 
-- **Ngôn ngữ**: tập con C++ Arduino gồm biến, mảng một chiều, hàm, `if/for/while/do/switch`, toán tử đầy đủ, `#define`, `#include` (bỏ qua), `String`, `Servo`. Integer division và ép kiểu hoạt động giống C++.
-- **Hàm dựng sẵn**: `pinMode`, `digitalRead/Write`, `analogRead/Write`, `delay`, `delayMicroseconds`, `millis`, `micros`, `map`, `constrain`, `min/max/abs/round/floor/ceil/sqrt/sq/pow/sin/cos/tan`, `random`, `tone/noTone`, `Serial.*`, `Servo.attach/write/read/detach`.
-- **Bo mạch ảo** (sơ đồ đấu dây cố định): D13 LED đỏ, D12 vàng, D11 lá, D9 LED PWM, D2 nút nhấn (`INPUT_PULLUP`), A0 biến trở, D8 còi, D10 servo. Đèn, còi (Web Audio), servo và Serial Monitor cập nhật theo thời gian thực.
+- **Ngôn ngữ**: tập con C++ Arduino gồm biến, mảng một chiều, hàm, `if/for/while/do/switch`, toán tử đầy đủ, `#define`, `#include` (bỏ qua), `String`, `Servo`, `LiquidCrystal`/`LiquidCrystal_I2C`. Phép chia chỉ cắt phần thập phân khi cả hai toán hạng đều là số nguyên — `7.0 / 2` cho `3.50` giống C++.
+- **Hàm dựng sẵn**: `pinMode`, `digitalRead/Write`, `analogRead/Write`, `pulseIn`, `delay`, `delayMicroseconds`, `millis`, `micros`, `map`, `constrain`, `min/max/abs/round/floor/ceil/sqrt/sq/pow/sin/cos/tan`, `random`, `tone/noTone`, `Serial.*`, `Servo.attach/write/read/detach`, `LiquidCrystal_I2C.init/begin/print/println/setCursor/clear/home/backlight/noBacklight/display/noDisplay`.
+- **Bo mạch ảo** (sơ đồ đấu dây cố định): D13 LED đỏ, D12 vàng, D11 lá, D9 LED PWM, D3/D5/D6 RGB LED, D2 nút nhấn (`INPUT_PULLUP`), D7 PIR, D4/A3 HC-SR04, A0 biến trở, A1 quang trở, A2 TMP36, D8 còi, D10 servo, LCD 16×2 I2C trên A4/A5. Đèn, còi (Web Audio), servo, LCD và Serial Monitor cập nhật theo thời gian thực.
+- **Cảm biến mô phỏng**: kéo thanh trượt để đổi ánh sáng (A1), nhiệt độ (A2), khoảng cách siêu âm (D4/A3) và bật/tắt chuyển động PIR (D7). `pulseIn()` trả thời gian sóng đi-về theo khoảng cách (58 µs/cm); TMP36 được quy đổi qua ADC 10 bit như phần cứng thật.
 - **Trình thông dịch dạng generator**: `delay()` tạm dừng mà không chặn UI; `millis()`/`micros()` lấy từ đồng hồ thực nên các sketch kiểu `millis() - last >= 500` chạy đúng.
-- **Editor** có tô màu cú pháp, đánh số dòng, báo lỗi kèm số dòng, `Ctrl+Enter` để chạy. **Serial Monitor** cho phép gửi dữ liệu xuống `Serial.read()`.
-- **8 ví dụ mẫu**: nháy LED, nút nhấn, biến trở → PWM, đèn giao thông, còi báo động, servo quét góc, đếm giây bằng `millis()`, điều khiển qua Serial.
-- Sketch, ví dụ đang chọn, trạng thái tắt tiếng và giá trị biến trở được lưu trong `localStorage` (`aztech-arduino-v1`). Chọn ví dụ chỉ nạp code; phải bấm **CHẠY** mới thực thi.
-- Toàn bộ nằm trong chunk lazy-load `ArduinoStudio` (~57 kB, gzip ~18 kB), không ảnh hưởng bundle chính.
+- **Editor** có tô màu cú pháp, đánh số dòng, báo lỗi kèm số dòng, `Ctrl+Enter` để chạy. **Serial Monitor** cho phép gửi dữ liệu xuống `Serial.read()`; **LCD 16×2** hiển thị đúng nội dung `print/setCursor`, kể cả khi tràn dòng hoặc tắt đèn nền.
+- **14 ví dụ mẫu**: nháy LED, nút nhấn, biến trở → PWM, đèn tự động theo ánh sáng, đo nhiệt độ TMP36, RGB LED, đo khoảng cách siêu âm, cảm biến chuyển động PIR, LCD 16×2, đèn giao thông, còi báo động, servo quét góc, đếm giây bằng `millis()`, điều khiển qua Serial.
+- Sketch, ví dụ đang chọn, trạng thái tắt tiếng và giá trị các cảm biến (biến trở, ánh sáng, nhiệt độ, khoảng cách, chuyển động) được lưu trong `localStorage` (`aztech-arduino-v1`). Chọn ví dụ chỉ nạp code; phải bấm **CHẠY** mới thực thi.
+- Toàn bộ nằm trong chunk lazy-load `ArduinoStudio` (~72 kB, gzip ~22 kB), không ảnh hưởng bundle chính.
 
 ## Scripts
 

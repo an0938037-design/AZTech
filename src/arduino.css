@@ -728,6 +728,198 @@
   cursor: pointer;
 }
 
+/* --------------------------------- RGB --------------------------------- */
+
+.arduino-rgb {
+  align-items: stretch;
+  text-align: left;
+}
+
+.arduino-rgb .arduino-part-name {
+  justify-content: flex-start;
+}
+
+.arduino-rgb-body {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.arduino-rgb-orb {
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  transition: background 120ms linear, box-shadow 120ms linear;
+}
+
+.arduino-rgb-values {
+  display: flex;
+  gap: 8px;
+  font-family: var(--mono);
+  font-size: 8px;
+  letter-spacing: 0.04em;
+  color: var(--ink-4);
+}
+
+/* --------------------------------- LCD --------------------------------- */
+
+.arduino-lcd {
+  margin: 0 14px 12px;
+  padding: 8px 9px 9px;
+  border: 1px solid #1b2733;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #10161d, #0a0f14);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.arduino-lcd-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 7px;
+  font-family: var(--mono);
+  font-size: 8px;
+  letter-spacing: 0.12em;
+  color: #6f8391;
+}
+
+.arduino-lcd-head span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.arduino-lcd-screen {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 7px 8px;
+  border: 1px solid #24323c;
+  border-radius: 6px;
+  background: #0f2a24;
+  color: #8ff0c9;
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.45;
+  letter-spacing: 0.06em;
+  white-space: pre;
+  overflow: hidden;
+  transition: background 140ms ease, color 140ms ease, opacity 140ms ease;
+}
+
+.arduino-lcd-line {
+  min-height: 1.45em;
+}
+
+.arduino-lcd-screen.is-dim {
+  background: #12201e;
+  color: #4d7d6d;
+}
+
+.arduino-lcd-screen.is-off {
+  background: #0b1116;
+  color: transparent;
+}
+
+/* ------------------------------- Sensors ------------------------------- */
+
+.arduino-sensors {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px 16px;
+  border-top: 1px solid var(--line);
+}
+
+.arduino-sensor-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.arduino-sensor {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 8px 9px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.arduino-sensor-head {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--mono);
+  font-size: 8px;
+  letter-spacing: 0.06em;
+  color: var(--ink-3);
+}
+
+.arduino-sensor-head em {
+  margin-left: auto;
+  font-style: normal;
+  font-size: 8.5px;
+  color: var(--ink-4);
+}
+
+.arduino-sensor input[type="range"] {
+  width: 100%;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.arduino-sensor-switch {
+  justify-content: space-between;
+}
+
+.arduino-sensor-switch.is-on {
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
+  box-shadow: inset 0 0 18px -8px var(--accent);
+}
+
+.arduino-switch {
+  position: relative;
+  width: 44px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+  transition: background 140ms ease, border-color 140ms ease;
+}
+
+.arduino-switch span {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--ink-3);
+  transition: transform 160ms var(--ease), background 160ms ease;
+}
+
+.arduino-switch.is-on {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 28%, transparent);
+}
+
+.arduino-switch.is-on span {
+  transform: translateX(21px);
+  background: var(--accent);
+}
+
+.arduino-switch:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 /* -------------------------------- Serial ------------------------------- */
 
 .arduino-serial {
@@ -991,6 +1183,10 @@
     grid-template-columns: minmax(0, 1fr);
   }
 
+  .arduino-sensor-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .arduino-examples {
     padding-top: 22px;
   }
@@ -1032,6 +1228,13 @@
 
   .arduino-servo-needle,
   .arduino-example {
+    transition: none;
+  }
+
+  .arduino-rgb-orb,
+  .arduino-lcd-screen,
+  .arduino-switch,
+  .arduino-switch span {
     transition: none;
   }
 }
