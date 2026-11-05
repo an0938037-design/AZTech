@@ -644,48 +644,127 @@ export default function SolarSystem({
       spin: number;
     }
     const worlds: WorldEntry[] = [];
-    for (const spec of SIM_WORLDS) {
+
+    /* Bộ phận phụ xoay quanh hành tinh và đèn nhấp nháy — gom lại để vòng lặp
+       render chỉ việc chạy qua, không phải duyệt cây mỗi khung hình. */
+    const worldSpinners: { obj: THREE.Object3D; speed: number }[] = [];
+    const worldBlinkers: { mesh: THREE.Mesh; base: number; speed: number; phase: number }[] = [];
+
+    const worldBody = (spec: SimWorld) => {
+      const size = spec.size;
+      const accent = new THREE.Color(spec.color).getHex();
       const group = new THREE.Group();
       let body: THREE.Mesh;
+
       if (spec.surface === "crystal") {
+        /* Tinh thể cắt được: lõi đa diện + cạnh sáng + mặt phẳng cắt + mảnh vụn. */
         body = new THREE.Mesh(
-          new THREE.OctahedronGeometry(spec.size * 1.3, 0),
+          new THREE.OctahedronGeometry(size * 1.34, 0),
           new THREE.MeshStandardMaterial({
             color: spec.color,
             flatShading: true,
-            roughness: 0.22,
-            metalness: 0.45,
+            roughness: 0.16,
+            metalness: 0.56,
             emissive: spec.glow,
-            emissiveIntensity: 0.3,
+            emissiveIntensity: 0.46,
           })
         );
+        body.add(
+          new THREE.LineSegments(
+            new THREE.EdgesGeometry(body.geometry),
+            new THREE.LineBasicMaterial({ color: 0xf2ecff, transparent: true, opacity: 0.5, depthWrite: false })
+          )
+        );
+        /* Hai mặt phẳng cắt cắt nhau — đúng thứ người học cầm trong tay ở phòng hình học. */
+        const cut = circleLine(size * 1.9, accent, 0.6);
+        cut.rotation.set(Math.PI / 2, 0, 0.42);
+        worldSpinners.push({ obj: cut, speed: 0.55 });
+        const cutB = circleLine(size * 1.55, 0xf2ecff, 0.3);
+        cutB.rotation.set(Math.PI / 2 + 0.7, 0, -0.3);
+        worldSpinners.push({ obj: cutB, speed: -0.38 });
+        group.add(cut, cutB);
+
+        const shards = new THREE.Group();
+        for (let i = 0; i < 3; i += 1) {
+          const shard = new THREE.Mesh(
+            new THREE.OctahedronGeometry(size * 0.2, 0),
+            new THREE.MeshStandardMaterial({
+              color: spec.color,
+              flatShading: true,
+              roughness: 0.2,
+              metalness: 0.5,
+              emissive: spec.glow,
+              emissiveIntensity: 1.2,
+            })
+          );
+          const a = (i / 3) * Math.PI * 2;
+          shard.position.set(Math.cos(a) * size * 1.6, Math.sin(a * 1.7) * size * 0.3, Math.sin(a) * size * 1.6);
+          shard.rotation.set(a, a * 1.3, 0);
+          shards.add(shard);
+        }
+        worldSpinners.push({ obj: shards, speed: 0.8 });
+        group.add(shards);
+        group.add(glowSprite(spec.glow, "#efe6ff", size * 6.4, 0.34));
       } else if (spec.surface === "ember") {
+        /* Lò phản ứng: cầu dung nham + vòng khí + ba phân tử bay quanh. */
         body = new THREE.Mesh(
-          new THREE.SphereGeometry(spec.size, 24, 16),
+          new THREE.SphereGeometry(size, 28, 20),
           new THREE.MeshStandardMaterial({
             color: spec.color,
-            roughness: 0.65,
-            metalness: 0.1,
+            roughness: 0.62,
+            metalness: 0.08,
             emissive: spec.glow,
-            emissiveIntensity: 0.6,
+            emissiveIntensity: 0.85,
           })
         );
-        group.add(glowSprite(spec.glow, "#ffe6b8", spec.size * 6, 0.34));
+        const haze = new THREE.Mesh(
+          new THREE.TorusGeometry(size * 1.6, size * 0.06, 10, 48),
+          new THREE.MeshBasicMaterial({
+            color: 0xffc078,
+            transparent: true,
+            opacity: 0.5,
+            depthWrite: false,
+            blending: THREE.AdditiveBlending,
+          })
+        );
+        haze.rotation.set(Math.PI / 2 - 0.28, 0, 0.2);
+        worldSpinners.push({ obj: haze, speed: 0.35 });
+        group.add(haze);
+
+        const atoms = new THREE.Group();
+        for (let i = 0; i < 3; i += 1) {
+          const atom = new THREE.Mesh(
+            new THREE.SphereGeometry(size * 0.18, 12, 8),
+            new THREE.MeshStandardMaterial({
+              color: 0xffd9a0,
+              roughness: 0.4,
+              metalness: 0.1,
+              emissive: 0xff8a3c,
+              emissiveIntensity: 1.6,
+            })
+          );
+          const a = (i / 3) * Math.PI * 2;
+          atom.position.set(Math.cos(a) * size * 1.58, Math.cos(a * 1.6) * size * 0.34, Math.sin(a) * size * 1.58);
+          atoms.add(atom);
+        }
+        worldSpinners.push({ obj: atoms, speed: 1.05 });
+        group.add(atoms);
+        group.add(glowSprite(spec.glow, "#ffe6b8", size * 6.8, 0.4));
       } else if (spec.surface === "polyglot") {
+        /* Lõi chữ: đá nguội bọc lưới ngữ liệu, hai quỹ đạo và những ký tự nhỏ. */
         body = new THREE.Mesh(
-          new THREE.IcosahedronGeometry(spec.size, 0),
+          new THREE.IcosahedronGeometry(size, 0),
           new THREE.MeshStandardMaterial({
             color: spec.color,
             flatShading: true,
-            roughness: 0.55,
-            metalness: 0.3,
+            roughness: 0.5,
+            metalness: 0.34,
             emissive: spec.glow,
-            emissiveIntensity: 0.4,
+            emissiveIntensity: 0.5,
           })
         );
-        /* Lõi đá nguội có một lớp ngữ liệu bọc ngoài — mỗi mặt là một thứ tiếng. */
         const shell = new THREE.Mesh(
-          new THREE.IcosahedronGeometry(spec.size * 1.52, 0),
+          new THREE.IcosahedronGeometry(size * 1.52, 0),
           new THREE.MeshBasicMaterial({
             color: spec.color,
             wireframe: true,
@@ -695,23 +774,123 @@ export default function SolarSystem({
           })
         );
         group.add(shell);
-        group.add(glowSprite(spec.glow, "#ffd7e2", spec.size * 5.6, 0.3));
+
+        const orbitA = circleLine(size * 1.9, accent, 0.52);
+        orbitA.rotation.set(Math.PI / 2 - 0.34, 0, 0.5);
+        worldSpinners.push({ obj: orbitA, speed: 0.42 });
+        const orbitB = circleLine(size * 1.66, 0xffd7e2, 0.34);
+        orbitB.rotation.set(Math.PI / 2 + 0.42, 0, -0.8);
+        worldSpinners.push({ obj: orbitB, speed: -0.6 });
+        group.add(orbitA, orbitB);
+
+        const glyphs = new THREE.Group();
+        for (let i = 0; i < 5; i += 1) {
+          const glyph = new THREE.Mesh(
+            new THREE.BoxGeometry(size * 0.11, size * 0.11, size * 0.11),
+            new THREE.MeshStandardMaterial({
+              color: 0xffd9e2,
+              roughness: 0.35,
+              metalness: 0.2,
+              emissive: spec.color,
+              emissiveIntensity: 1.4,
+            })
+          );
+          const a = (i / 5) * Math.PI * 2;
+          glyph.position.set(Math.cos(a) * size * 1.72, Math.sin(a * 1.9) * size * 0.36, Math.sin(a) * size * 1.72);
+          glyph.rotation.set(a, a, a * 0.6);
+          glyphs.add(glyph);
+        }
+        worldSpinners.push({ obj: glyphs, speed: 0.9 });
+        group.add(glyphs);
+        group.add(glowSprite(spec.glow, "#ffd7e2", size * 6, 0.34));
       } else {
+        /* Tiểu hành tinh khắc mạch in: khối đá thẫm làm thân, phiến mạch nằm trên
+           mặt phẳng, chip ở giữa và ba LED nhấp theo nhịp. */
         body = new THREE.Mesh(
-          new THREE.BoxGeometry(spec.size * 1.7, spec.size * 1.15, spec.size * 1.7),
+          new THREE.IcosahedronGeometry(size * 1.24, 0),
           new THREE.MeshStandardMaterial({
-            color: 0x11313a,
-            roughness: 0.45,
-            metalness: 0.6,
-            emissive: spec.glow,
-            emissiveIntensity: 0.22,
+            color: 0x1a2a33,
+            flatShading: true,
+            roughness: 0.84,
+            metalness: 0.26,
+            emissive: 0x0a1a22,
+            emissiveIntensity: 0.5,
           })
         );
-        const ring = circleLine(spec.size * 2.6, new THREE.Color(spec.color).getHex(), 0.45);
+        body.scale.set(1.02, 0.6, 1.02);
+
+        const board = new THREE.Mesh(
+          new THREE.BoxGeometry(size * 1.5, size * 0.18, size * 1.5),
+          new THREE.MeshStandardMaterial({
+            color: 0x0e2b33,
+            roughness: 0.34,
+            metalness: 0.6,
+            emissive: spec.glow,
+            emissiveIntensity: 0.32,
+          })
+        );
+        board.position.y = size * 0.8;
+        board.rotation.y = 0.36;
+        board.add(
+          new THREE.LineSegments(
+            new THREE.EdgesGeometry(board.geometry),
+            new THREE.LineBasicMaterial({ color: spec.color, transparent: true, opacity: 0.8, depthWrite: false })
+          )
+        );
+
+        /* Hai đường mạch khắc trên mặt bo. */
+        const trace = circleLine(size * 0.52, accent, 0.5);
+        trace.rotation.x = Math.PI / 2;
+        trace.position.y = size * 0.1;
+        const traceB = circleLine(size * 0.3, 0xffd7a0, 0.34);
+        traceB.rotation.x = Math.PI / 2;
+        traceB.position.y = size * 0.1;
+        board.add(trace, traceB);
+
+        const chip = new THREE.Mesh(
+          new THREE.BoxGeometry(size * 0.42, size * 0.14, size * 0.42),
+          new THREE.MeshStandardMaterial({
+            color: 0x07181d,
+            roughness: 0.35,
+            metalness: 0.7,
+            emissive: spec.glow,
+            emissiveIntensity: 0.45,
+          })
+        );
+        chip.position.y = size * 0.14;
+        board.add(chip);
+
+        const ledColors = [0x64ffb4, 0x67e8f9, 0xffb347];
+        for (let i = 0; i < 3; i += 1) {
+          const led = new THREE.Mesh(
+            new THREE.BoxGeometry(size * 0.11, size * 0.07, size * 0.11),
+            new THREE.MeshStandardMaterial({
+              color: 0x0c2228,
+              roughness: 0.3,
+              metalness: 0.2,
+              emissive: ledColors[i],
+              emissiveIntensity: 2.4,
+            })
+          );
+          led.position.set((i - 1) * size * 0.55, size * 0.12, size * 0.44);
+          worldBlinkers.push({ mesh: led, base: 2.4, speed: 1.6 + i * 0.7, phase: i * 2.1 });
+          board.add(led);
+        }
+        group.add(board);
+
+        const ring = circleLine(size * 2.0, accent, 0.42);
         ring.rotation.x = Math.PI / 2;
+        worldSpinners.push({ obj: ring, speed: 0.55 });
         group.add(ring);
+        group.add(glowSprite(spec.glow, "#d9fffb", size * 5.4, 0.32));
       }
+
       group.add(body);
+      return group;
+    };
+
+    for (const spec of SIM_WORLDS) {
+      const group = worldBody(spec);
       const hit = new THREE.Mesh(
         new THREE.SphereGeometry(Math.max(spec.size * 1.9, 0.26), 10, 8),
         new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false })
@@ -1797,6 +1976,11 @@ export default function SolarSystem({
       for (const world of worlds) {
         world.group.position.copy(worldPosition(world.spec, orbitClock));
         world.group.rotation.y += delta * world.spin;
+      }
+      for (const part of worldSpinners) part.obj.rotation.y += delta * part.speed;
+      for (const led of worldBlinkers) {
+        const wave = 0.5 + 0.5 * Math.sin(orbitClock * led.speed + led.phase);
+        (led.mesh.material as THREE.MeshStandardMaterial).emissiveIntensity = led.base * (0.3 + 0.7 * wave);
       }
 
       if (flight) {
