@@ -1,0 +1,663 @@
+/* Trạm Vạn Ngôn — dải ngôn ngữ phía trên, khung mã và bảng kết quả tách đôi,
+   bảng kết quả có thể chuyển sang cạnh hoặc xuống dưới. Khung mã giữ nền đậm ở cả hai giao diện. */
+
+.van-page {
+  --van-ink: #d9e6f7;
+  --van-ink-dim: rgba(217, 230, 247, 0.6);
+  --world-color: #f2748c;
+  --world-glow: #a3284a;
+  height: 100%;
+  min-height: 580px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px var(--gutter) 14px;
+}
+
+/* --------------------------------- đầu trang --------------------------------- */
+
+.van-head {
+  flex: none;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  animation: van-rise 320ms var(--ease) both;
+}
+
+.van-head-copy { min-width: 0; }
+
+.van-head-copy h1 {
+  margin: 2px 0 4px;
+  font-size: 25px;
+  font-weight: 650;
+  letter-spacing: -0.035em;
+}
+
+.van-head-copy p {
+  margin: 0;
+  max-width: 74ch;
+  font-size: 12.5px;
+  line-height: 1.65;
+  color: var(--ink-3);
+}
+
+.van-head-copy em {
+  font-style: normal;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: color-mix(in srgb, var(--world-color) 82%, var(--ink));
+}
+
+.van-head-side {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.van-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 11px;
+  border-radius: 999px;
+  border: 1px solid var(--glass-border);
+  background: var(--glass-soft);
+  font-family: var(--mono);
+  font-size: 8.5px;
+  letter-spacing: 0.14em;
+  color: var(--ink-2);
+}
+
+.van-state i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.van-state.is-run { color: #ffd27a; }
+.van-state.is-run i { animation: van-pulse 900ms ease-in-out infinite; }
+.van-state.is-ok { color: #6fe0ab; }
+.van-state.is-bad { color: #ff9a8b; }
+
+.van-clock {
+  min-width: 62px;
+  font-family: var(--mono);
+  font-size: 11px;
+  text-align: right;
+  color: var(--ink-3);
+}
+
+/* ------------------------------- dải ngôn ngữ ------------------------------- */
+
+.van-band {
+  flex: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  padding: 10px 12px;
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  background: var(--glass-panel);
+  animation: van-rise 340ms var(--ease) 60ms both;
+}
+
+.van-band-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  animation: van-rise 300ms var(--ease) calc(var(--i, 0) * 40ms + 90ms) both;
+}
+
+.van-band-label {
+  font-family: var(--mono);
+  font-size: 8px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+  white-space: nowrap;
+}
+
+.van-band-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.van-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px 5px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--glass-border);
+  background: transparent;
+  font-size: 11.5px;
+  font-weight: 550;
+  letter-spacing: -0.01em;
+  color: var(--ink-2);
+  cursor: pointer;
+  transition: transform 180ms var(--ease), border-color 180ms ease, color 180ms ease,
+    background-color 180ms ease, box-shadow 240ms var(--ease);
+}
+
+.van-chip:hover {
+  transform: translateY(-1px);
+  color: var(--ink);
+  border-color: color-mix(in srgb, var(--world-color) 50%, var(--glass-border));
+}
+
+.van-chip.is-active {
+  color: var(--ink);
+  background: color-mix(in srgb, var(--world-color) 20%, transparent);
+  border-color: color-mix(in srgb, var(--world-color) 72%, transparent);
+  box-shadow: 0 10px 26px -16px color-mix(in srgb, var(--world-glow) 90%, transparent);
+}
+
+.van-led {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #4fdca0;
+  box-shadow: 0 0 7px #4fdca0;
+  flex: none;
+}
+
+[data-kind="remote"] .van-led {
+  background: #7fb2ff;
+  box-shadow: 0 0 7px #7fb2ff;
+}
+
+/* --------------------------------- sân khấu --------------------------------- */
+
+.van-stage {
+  flex: 1;
+  /* Không ép nhỏ hơn tổng hai khung: thà để trang cuộn còn hơn bảng kết quả
+     tràn ra ngoài và bị dock đè lên. */
+  min-height: 460px;
+  display: grid;
+  gap: 12px;
+  animation: van-rise 360ms var(--ease) 120ms both;
+}
+
+.van-stage.is-right {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 420px);
+}
+
+.van-stage.is-bottom {
+  grid-template-rows: minmax(0, 1.2fr) minmax(0, 1fr);
+}
+
+.van-panel {
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 18px;
+  border: 1px solid rgba(148, 180, 220, 0.18);
+  background: linear-gradient(178deg, rgba(13, 20, 34, 0.96), rgba(6, 10, 19, 0.97));
+  box-shadow: 0 30px 60px -46px rgba(0, 0, 0, 0.9);
+  color: var(--van-ink);
+}
+
+.van-panel-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-bottom: 1px solid rgba(148, 180, 220, 0.14);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.van-file {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 7px;
+  white-space: nowrap;
+}
+
+.van-file strong {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: color-mix(in srgb, var(--world-color) 85%, #fff);
+}
+
+.van-file em {
+  font-style: normal;
+  font-family: var(--mono);
+  font-size: 9px;
+  color: rgba(217, 230, 247, 0.42);
+}
+
+.van-blurb {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  color: rgba(217, 230, 247, 0.5);
+}
+
+.van-engines {
+  display: flex;
+  gap: 4px;
+}
+
+.van-engine {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 180, 220, 0.2);
+  background: transparent;
+  font-family: var(--mono);
+  font-size: 8.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(217, 230, 247, 0.62);
+  cursor: pointer;
+  transition: border-color 180ms ease, color 180ms ease, background-color 180ms ease;
+}
+
+.van-engine.is-active {
+  color: #fff;
+  border-color: color-mix(in srgb, var(--world-color) 70%, transparent);
+  background: color-mix(in srgb, var(--world-color) 18%, transparent);
+}
+
+.van-tool {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 9px;
+  border: 1px solid rgba(148, 180, 220, 0.2);
+  background: transparent;
+  color: rgba(217, 230, 247, 0.66);
+  cursor: pointer;
+  transition: color 160ms ease, border-color 160ms ease, transform 160ms var(--ease);
+}
+
+.van-tool:hover {
+  color: #fff;
+  border-color: color-mix(in srgb, var(--world-color) 60%, transparent);
+}
+
+.van-tool:active { transform: scale(0.94); }
+
+/* --------------------------------- khung mã --------------------------------- */
+
+.van-editor {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+}
+
+.van-gutter {
+  overflow: hidden;
+  padding: 12px 0;
+  text-align: right;
+  border-right: 1px solid rgba(148, 180, 220, 0.12);
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.van-gutter span {
+  display: block;
+  padding-right: 9px;
+  font: 11px/1.7 var(--mono);
+  color: rgba(217, 230, 247, 0.26);
+}
+
+.van-area {
+  border: 0;
+  outline: 0;
+  resize: none;
+  background: transparent;
+  padding: 12px 14px;
+  font: 12.5px/1.7 var(--mono);
+  color: var(--van-ink);
+  caret-color: color-mix(in srgb, var(--world-color) 80%, #fff);
+  tab-size: 2;
+  overflow: auto;
+}
+
+.van-area::selection {
+  background: color-mix(in srgb, var(--world-color) 35%, transparent);
+}
+
+.van-editor-panel {
+  min-height: 224px;
+}
+
+.van-console {
+  min-height: 200px;
+}
+
+.van-tray {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: 10px;
+  max-height: 0;
+  padding: 0 12px;
+  overflow: hidden;
+  border-top: 1px solid transparent;
+  transition: max-height 260ms var(--ease), padding 220ms var(--ease), border-color 220ms ease;
+}
+
+.van-tray.is-open {
+  max-height: 168px;
+  padding: 10px 12px 12px;
+  border-top-color: rgba(148, 180, 220, 0.14);
+}
+
+.van-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.van-field span {
+  font-family: var(--mono);
+  font-size: 8px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(217, 230, 247, 0.45);
+}
+
+.van-field textarea,
+.van-field input {
+  width: 100%;
+  padding: 7px 9px;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 180, 220, 0.2);
+  background: rgba(0, 0, 0, 0.26);
+  font: 11.5px/1.6 var(--mono);
+  color: var(--van-ink);
+  outline: 0;
+  resize: vertical;
+}
+
+.van-field textarea:focus,
+.van-field input:focus {
+  border-color: color-mix(in srgb, var(--world-color) 65%, transparent);
+}
+
+/* ------------------------------- bảng kết quả ------------------------------- */
+
+.van-tabs {
+  display: flex;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.van-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: transparent;
+  font-family: var(--mono);
+  font-size: 8.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(217, 230, 247, 0.55);
+  cursor: pointer;
+  transition: color 160ms ease, background-color 180ms ease, border-color 180ms ease;
+}
+
+.van-tab:hover { color: #fff; }
+
+.van-tab.is-active {
+  color: #fff;
+  border-color: rgba(148, 180, 220, 0.24);
+  background: rgba(148, 180, 220, 0.12);
+}
+
+.van-console-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 12px;
+}
+
+.van-stream {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.van-line {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font: 11.5px/1.65 var(--mono);
+  color: var(--van-ink);
+}
+
+.van-line.is-err { color: #ffb0a2; }
+
+.van-hint {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.7;
+  color: rgba(217, 230, 247, 0.45);
+}
+
+.van-hint kbd {
+  padding: 1px 5px;
+  border-radius: 5px;
+  border: 1px solid rgba(148, 180, 220, 0.28);
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--van-ink);
+}
+
+.van-notes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.van-notes li {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  line-height: 1.6;
+  color: rgba(217, 230, 247, 0.55);
+  animation: van-slide 200ms ease-out both;
+}
+
+.van-cursor::after {
+  content: "▍";
+  color: color-mix(in srgb, var(--world-color) 85%, #fff);
+  animation: van-blink 900ms steps(2, end) infinite;
+}
+
+.van-preview {
+  width: 100%;
+  height: 100%;
+  min-height: 220px;
+  border: 1px solid rgba(148, 180, 220, 0.2);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.van-tablewrap { overflow: auto; }
+
+.van-table {
+  border-collapse: collapse;
+  width: 100%;
+  font: 11px/1.6 var(--mono);
+}
+
+.van-table th,
+.van-table td {
+  padding: 5px 9px;
+  text-align: left;
+  white-space: nowrap;
+  border-bottom: 1px solid rgba(148, 180, 220, 0.12);
+}
+
+.van-table th {
+  position: sticky;
+  top: -12px;
+  background: #0b1220;
+  color: color-mix(in srgb, var(--world-color) 80%, #fff);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.van-table td { color: var(--van-ink); }
+
+.van-console-foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  padding: 7px 12px;
+  border-top: 1px solid rgba(148, 180, 220, 0.14);
+  background: rgba(0, 0, 0, 0.24);
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.06em;
+  color: rgba(217, 230, 247, 0.5);
+}
+
+.van-console-foot .is-accent { color: color-mix(in srgb, var(--world-color) 80%, #fff); }
+
+/* ---------------------------------- dock ---------------------------------- */
+
+.van-dock {
+  position: sticky;
+  bottom: 0;
+  z-index: 3;
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border-radius: 16px;
+  border: 1px solid var(--glass-border);
+  background: var(--glass-panel);
+  backdrop-filter: var(--glass-blur);
+  animation: van-rise 320ms var(--ease) 160ms both;
+}
+
+.van-run { min-width: 116px; justify-content: center; }
+
+.van-dock .btn.is-on {
+  border-color: color-mix(in srgb, var(--world-color) 60%, transparent);
+  color: var(--ink);
+}
+
+.van-kbd {
+  display: inline-flex;
+  gap: 3px;
+  align-items: center;
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--ink-4);
+}
+
+.van-kbd kbd {
+  padding: 2px 5px;
+  border-radius: 5px;
+  border: 1px solid var(--glass-border);
+  color: var(--ink-3);
+}
+
+.van-dock-tail {
+  margin-left: auto;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.06em;
+  color: var(--ink-4);
+}
+
+@keyframes van-rise {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes van-slide {
+  from { opacity: 0; transform: translateX(-5px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes van-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.25; }
+}
+
+@keyframes van-blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
+/* Nền sáng: đèn báo và trạng thái phải đậm hơn vì chúng nằm trên kính trắng. */
+[data-theme="light"] .van-state.is-run { color: #9a5c05; }
+[data-theme="light"] .van-state.is-ok { color: #14774f; }
+[data-theme="light"] .van-state.is-bad { color: #a52517; }
+
+[data-theme="light"] .van-led {
+  background: #12a46b;
+  box-shadow: none;
+}
+
+[data-theme="light"] [data-kind="remote"] .van-led {
+  background: #2f6fd0;
+}
+
+/* ------------------------------- thích ứng ------------------------------- */
+
+@media (max-width: 1180px) {
+  .van-stage.is-right,
+  .van-stage.is-bottom {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(240px, 1.2fr) minmax(220px, 1fr);
+  }
+}
+
+@media (max-width: 720px) {
+  .van-head { grid-template-columns: auto minmax(0, 1fr); }
+  .van-head-side { grid-column: 1 / -1; justify-content: flex-start; }
+  .van-head-copy h1 { font-size: 21px; }
+  .van-head-copy p { display: none; }
+
+  /* Dải ngôn ngữ cuộn ngang thay vì xếp thành năm hàng rồi nuốt hết khung mã. */
+  .van-band {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+  }
+
+  .van-band-group { flex: none; }
+  .van-tray { grid-template-columns: minmax(0, 1fr); }
+  .van-blurb { display: none; }
+  .van-dock { flex-wrap: wrap; }
+  .van-dock-tail { margin-left: 0; width: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .van-head,
+  .van-band,
+  .van-band-group,
+  .van-stage,
+  .van-dock,
+  .van-notes li { animation: none; }
+  .van-state.is-run i,
+  .van-cursor::after { animation: none; }
+  .van-chip,
+  .van-tab,
+  .van-engine { transition-duration: 1ms; }
+}

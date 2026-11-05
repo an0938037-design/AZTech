@@ -60,7 +60,7 @@ const GROUPS: { title: string; rows: NavRow[] }[] = [
   },
 ];
 
-const LAB_VIEWS: View[] = ["geometry", "lab", "arduino"];
+const LAB_VIEWS: View[] = ["geometry", "lab", "arduino", "vanlab"];
 
 export default function Sidebar({ open, onClose }: Props) {
   const lessons = useStore((s) => s.lessons);

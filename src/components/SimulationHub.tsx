@@ -29,7 +29,7 @@ export default function SimulationHub() {
 
       <div className="sim-body">
         <p className="sim-lede">
-          Ba thế giới giả tưởng trôi giữa vành đai — không theo thiên văn thật, mỗi
+          Bốn thế giới giả tưởng trôi giữa vành đai — không theo thiên văn thật, mỗi
           thế giới mang một vật liệu và quy tắc riêng. Chọn một thế giới để bước vào
           phòng mô phỏng.
         </p>

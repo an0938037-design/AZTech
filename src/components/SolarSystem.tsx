@@ -671,6 +671,31 @@ export default function SolarSystem({
           })
         );
         group.add(glowSprite(spec.glow, "#ffe6b8", spec.size * 6, 0.34));
+      } else if (spec.surface === "polyglot") {
+        body = new THREE.Mesh(
+          new THREE.IcosahedronGeometry(spec.size, 0),
+          new THREE.MeshStandardMaterial({
+            color: spec.color,
+            flatShading: true,
+            roughness: 0.55,
+            metalness: 0.3,
+            emissive: spec.glow,
+            emissiveIntensity: 0.4,
+          })
+        );
+        /* Lõi đá nguội có một lớp ngữ liệu bọc ngoài — mỗi mặt là một thứ tiếng. */
+        const shell = new THREE.Mesh(
+          new THREE.IcosahedronGeometry(spec.size * 1.52, 0),
+          new THREE.MeshBasicMaterial({
+            color: spec.color,
+            wireframe: true,
+            transparent: true,
+            opacity: 0.34,
+            depthWrite: false,
+          })
+        );
+        group.add(shell);
+        group.add(glowSprite(spec.glow, "#ffd7e2", spec.size * 5.6, 0.3));
       } else {
         body = new THREE.Mesh(
           new THREE.BoxGeometry(spec.size * 1.7, spec.size * 1.15, spec.size * 1.7),

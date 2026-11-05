@@ -240,7 +240,7 @@ export function planetReach(planet: PlanetSpec): number {
 }
 
 const ORBIT_GAP = 0.6;
-const BELT_WIDTH = 5.6;
+const BELT_WIDTH = 7.0;
 const BELT_CLEARANCE = 0.55;
 
 (function layoutOrbits() {

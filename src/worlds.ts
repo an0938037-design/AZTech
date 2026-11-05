@@ -1,10 +1,10 @@
 import { BELT } from "./solar";
 import type { View } from "./store";
 
-/* Ba thế giới giả tưởng nằm trong vành đai tiểu hành tinh — mỗi thế giới một
+/* Bốn thế giới giả tưởng nằm trong vành đai tiểu hành tinh — mỗi thế giới một
    phong cách riêng, không mô phỏng thiên văn thật. */
 export interface SimWorld {
-  id: "crystal" | "ember" | "circuit";
+  id: "crystal" | "ember" | "circuit" | "polyglot";
   name: string;
   latin: string;
   designation: string;
@@ -25,7 +25,7 @@ export const BELT_OUTER = BELT.outer;
 export const BELT_CENTER = BELT.center;
 export const BELT_SPAN = BELT.outer - BELT.inner;
 
-/* Ba thế giới nằm rải trong dải vành đai đã chừa sẵn giữa Sao Hoả và Sao Mộc. */
+/* Bốn thế giới nằm rải trong dải vành đai đã chừa sẵn giữa Sao Hoả và Sao Mộc. */
 const beltSpan = BELT.outer - BELT.inner;
 const beltAt = (fraction: number) => BELT.inner + beltSpan * fraction;
 
@@ -41,7 +41,7 @@ export const SIM_WORLDS: SimWorld[] = [
     color: "#b9a6ff",
     glow: "#6d4aff",
     surface: "crystal",
-    orbit: beltAt(0.16),
+    orbit: beltAt(0.11),
     size: 0.56,
     phase: 0.4,
     speed: 0.055,
@@ -57,7 +57,7 @@ export const SIM_WORLDS: SimWorld[] = [
     color: "#ffb347",
     glow: "#ff5c1a",
     surface: "ember",
-    orbit: beltAt(0.5),
+    orbit: beltAt(0.37),
     size: 0.62,
     phase: 2.4,
     speed: 0.047,
@@ -73,9 +73,25 @@ export const SIM_WORLDS: SimWorld[] = [
     color: "#5eead4",
     glow: "#0891b2",
     surface: "circuit",
-    orbit: beltAt(0.84),
+    orbit: beltAt(0.63),
     size: 0.54,
     phase: 4.3,
     speed: 0.041,
+  },
+  {
+    id: "polyglot",
+    name: "Vạn Ngôn",
+    latin: "Polyglot-Σ · Ngữ Liệu",
+    designation: "MÔ PHỎNG ĐA NGÔN NGỮ",
+    view: "vanlab",
+    tagline: "Quả cầu đá nguội bọc kín chữ: hàng chục thứ tiếng cùng cháy trong một lò.",
+    traits: ["Đa ngôn ngữ", "WebAssembly", "Máy từ xa"],
+    color: "#f2748c",
+    glow: "#a3284a",
+    surface: "polyglot",
+    orbit: beltAt(0.89),
+    size: 0.54,
+    phase: 5.9,
+    speed: 0.038,
   },
 ];

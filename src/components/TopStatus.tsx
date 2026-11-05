@@ -16,6 +16,7 @@ const VIEW_LABEL: Record<View, string> = {
   geometry: "HÌNH HỌC 3D",
   lab: "PHÒNG LAB 3D",
   arduino: "ARDUINO",
+  vanlab: "VẠN NGÔN",
   sim: "MÔ PHỎNG",
   assess: "KIỂM TRA ĐÁNH GIÁ",
   settings: "CÀI ĐẶT",
