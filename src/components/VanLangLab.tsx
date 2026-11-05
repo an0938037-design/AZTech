@@ -197,7 +197,7 @@ export default function VanLangLab() {
           <span className="kicker">{world?.latin ?? "POLYGLOT-Σ"}</span>
           <h1>Trạm Vạn Ngôn</h1>
           <p>
-            Hai mươi thứ tiếng trong một khung mã. Máy chạy nằm trong trình duyệt ở chế độ
+            {VAN_LANGS.length} thứ tiếng trong một khung mã. Máy chạy nằm trong trình duyệt ở chế độ
             <em> trong máy</em>; những compiler nặng hơn gửi sang <em>máy từ xa</em>.
           </p>
         </div>
