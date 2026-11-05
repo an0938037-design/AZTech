@@ -25,9 +25,9 @@ export const BELT_OUTER = BELT.outer;
 export const BELT_CENTER = BELT.center;
 export const BELT_SPAN = BELT.outer - BELT.inner;
 
-/* Bốn thế giới nằm rải trong dải vành đai đã chừa sẵn giữa Sao Hoả và Sao Mộc. */
-const beltSpan = BELT.outer - BELT.inner;
-const beltAt = (fraction: number) => BELT.inner + beltSpan * fraction;
+/* Bốn thế giới cùng chạy trên một vòng tròn ở giữa vành đai, cách nhau đúng 90°
+   và quay cùng một tốc độ — đội hình chữ thập không bao giờ đổi. */
+export const WORLD_RING_SPEED = 0.035;
 
 export const SIM_WORLDS: SimWorld[] = [
   {
@@ -41,10 +41,10 @@ export const SIM_WORLDS: SimWorld[] = [
     color: "#b9a6ff",
     glow: "#6d4aff",
     surface: "crystal",
-    orbit: beltAt(0.11),
+    orbit: BELT.center,
     size: 0.56,
-    phase: 0.4,
-    speed: 0.055,
+    phase: 0,
+    speed: WORLD_RING_SPEED,
   },
   {
     id: "ember",
@@ -57,10 +57,10 @@ export const SIM_WORLDS: SimWorld[] = [
     color: "#ffb347",
     glow: "#ff5c1a",
     surface: "ember",
-    orbit: beltAt(0.37),
+    orbit: BELT.center,
     size: 0.62,
-    phase: 2.4,
-    speed: 0.047,
+    phase: Math.PI / 2,
+    speed: WORLD_RING_SPEED,
   },
   {
     id: "circuit",
@@ -73,10 +73,10 @@ export const SIM_WORLDS: SimWorld[] = [
     color: "#5eead4",
     glow: "#0891b2",
     surface: "circuit",
-    orbit: beltAt(0.63),
+    orbit: BELT.center,
     size: 0.54,
-    phase: 4.3,
-    speed: 0.041,
+    phase: Math.PI,
+    speed: WORLD_RING_SPEED,
   },
   {
     id: "polyglot",
@@ -89,9 +89,9 @@ export const SIM_WORLDS: SimWorld[] = [
     color: "#f2748c",
     glow: "#a3284a",
     surface: "polyglot",
-    orbit: beltAt(0.89),
+    orbit: BELT.center,
     size: 0.54,
-    phase: 5.9,
-    speed: 0.038,
+    phase: (Math.PI * 3) / 2,
+    speed: WORLD_RING_SPEED,
   },
 ];

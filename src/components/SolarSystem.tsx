@@ -150,11 +150,8 @@ function planetPosition(spec: PlanetSpec, time: number): THREE.Vector3 {
 
 function worldPosition(spec: SimWorld, time: number): THREE.Vector3 {
   const angle = spec.phase + time * spec.speed;
-  return new THREE.Vector3(
-    Math.cos(angle) * spec.orbit,
-    Math.sin(angle * 2.4 + spec.phase) * 0.16,
-    Math.sin(angle) * spec.orbit
-  );
+  /* Cả bốn nằm phẳng trên một vòng tròn nên đội hình chữ thập giữ nguyên hình. */
+  return new THREE.Vector3(Math.cos(angle) * spec.orbit, 0, Math.sin(angle) * spec.orbit);
 }
 
 function satelliteLocal(chapter: SolarChapter, time: number): THREE.Vector3 {
@@ -626,6 +623,8 @@ export default function SolarSystem({
       const edgeLine = circleLine(edge, 0xbcd8ff, alpha);
       beltGroup.add(edgeLine);
     }
+    /* Vòng chung của bốn trạm: cho thấy chúng đứng trên đúng một quỹ đạo. */
+    beltGroup.add(circleLine(BELT_CENTER, 0xe6d2dc, 0.2));
 
     /* Vành chạm chỉ là một ống mảnh nằm giữa dải đá; nếu dày, nó nuốt luôn ba
        thế giới phòng lab cùng bán kính và không tài nào bấm được. */
