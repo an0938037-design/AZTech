@@ -109,7 +109,7 @@ export default function SolarDashboard({ ambient = false }: { ambient?: boolean 
       window.clearTimeout(timer);
       window.removeEventListener("resize", compute);
     };
-  }, [focus.level, query, panelOpen]);
+  }, [focus.level, query, panelOpen, ambient]);
   const planet = planetById(model, focus.planetId);
   const chapter = chapterById(model, focus.planetId, focus.chapterId);
   const world =

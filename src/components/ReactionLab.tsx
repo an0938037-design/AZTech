@@ -2040,14 +2040,19 @@ export default function ReactionLab() {
     }
 
     const dummy = new THREE.Object3D();
-    const clock = new THREE.Clock();
+    /* THREE.Clock đã bị deprecate ở three r187: tự đo delta bằng performance.now(). */
+    let lastFrame = 0;
+    let elapsedTime = 0;
     let frame = 0;
 
     const animate = () => {
       frame = requestAnimationFrame(animate);
 
-      const delta = Math.min(clock.getDelta(), 0.05);
-      const time = clock.elapsedTime;
+      const now = performance.now();
+      const delta = lastFrame === 0 ? 0 : Math.min((now - lastFrame) / 1000, 0.05);
+      lastFrame = now;
+      elapsedTime += delta;
+      const time = elapsedTime;
       const state = vis.current;
 
       const targetTemp = state.heating ? 100 : state.burning ? 86 : 25;
